@@ -1,5 +1,6 @@
 fastapi
 uvicorn
+gunicorn
 sqlalchemy
 psycopg2-binary
 pydantic
@@ -15,5 +16,6 @@ passlib[bcrypt]
 bcrypt
 numpy
 qdrant-client
+fastembed
 httpx
-
+alembic
