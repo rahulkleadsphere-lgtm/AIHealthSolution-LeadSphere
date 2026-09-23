@@ -72,7 +72,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return null;
   });
 
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState<boolean>(() => {
+    if (typeof window !== "undefined") {
+      const hash = window.location.hash || "";
+      const search = window.location.search || "";
+      if (
+        hash.includes("access_token=") ||
+        hash.includes("refresh_token=") ||
+        search.includes("code=") ||
+        search.includes("token=")
+      ) {
+        return true;
+      }
+    }
+    return false;
+  });
 
   // Synchronize Supabase OAuth Auth State
   useEffect(() => {
@@ -98,7 +112,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setUser(syncRes.user);
             localStorage.setItem("seva_user", JSON.stringify(syncRes.user));
             localStorage.removeItem("seva_logged_out");
+            setIsLoading(false);
             toast.success(`Signed in as ${syncRes.user.name}`);
+            if (
+              window.location.pathname === "/login" ||
+              window.location.pathname === "/signup" ||
+              window.location.pathname === "/"
+            ) {
+              window.location.href = "/dashboard";
+            }
             return;
           }
         } catch (syncErr) {
@@ -130,7 +152,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUser(authenticatedUser);
         localStorage.setItem("seva_user", JSON.stringify(authenticatedUser));
         localStorage.removeItem("seva_logged_out");
+        setIsLoading(false);
         toast.success(`Signed in with Google as ${fullName}`);
+        if (
+          window.location.pathname === "/login" ||
+          window.location.pathname === "/signup" ||
+          window.location.pathname === "/"
+        ) {
+          window.location.href = "/dashboard";
+        }
+      } else {
+        setIsLoading(false);
       }
     });
 

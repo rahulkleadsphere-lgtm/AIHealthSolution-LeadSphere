@@ -46,13 +46,22 @@ const Login: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
 
-  const { login, loginWithGoogle, isLoading } = useAuth();
+  const { login, loginWithGoogle, isAuthenticated, user, isLoading } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
   useEffect(() => {
     document.title = "Patient & Clinician Login | SevaSetu AI";
   }, []);
+
+  // When already authenticated or on successful sign-in, redirect to dashboard
+  useEffect(() => {
+    if (isAuthenticated || user) {
+      const from = (location.state as any)?.from?.pathname;
+      const target = from && from !== "/login" && from !== "/signup" ? from : "/dashboard";
+      navigate(target, { replace: true });
+    }
+  }, [isAuthenticated, user, navigate, location]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -62,8 +71,9 @@ const Login: React.FC = () => {
     }
     try {
       await login(email, password);
-      const from = (location.state as any)?.from?.pathname || "/dashboard";
-      navigate(from, { replace: true });
+      const from = (location.state as any)?.from?.pathname;
+      const target = from && from !== "/login" && from !== "/signup" ? from : "/dashboard";
+      navigate(target, { replace: true });
     } catch (e) {
       // Error toasted in auth service
     }
@@ -93,8 +103,7 @@ const Login: React.FC = () => {
     setPassword(demoPassword);
     try {
       await login(demoEmail, demoPassword);
-      const from = (location.state as any)?.from?.pathname || "/dashboard";
-      navigate(from, { replace: true });
+      navigate("/dashboard", { replace: true });
     } catch (e) {
       // Handled in login service
     }

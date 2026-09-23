@@ -60,7 +60,14 @@ const QUICK_ALLERGIES = ["None", "Penicillin", "Sulfa Drugs", "Aspirin", "Peanut
 
 const Signup: React.FC = () => {
   const navigate = useNavigate();
-  const { signup, loginWithGoogle, isLoading } = useAuth();
+  const { signup, loginWithGoogle, isAuthenticated, user, isLoading } = useAuth();
+
+  useEffect(() => {
+    document.title = "Register Clinical Profile | SevaSetu AI";
+    if (isAuthenticated || user) {
+      navigate("/dashboard", { replace: true });
+    }
+  }, [isAuthenticated, user, navigate]);
 
   // Wizard Step (1: Credentials, 2: Demographics & BMI, 3: Emergency & Medical)
   const [currentStep, setCurrentStep] = useState<1 | 2 | 3>(1);
@@ -246,7 +253,7 @@ const Signup: React.FC = () => {
       };
 
       await signup(payload);
-      navigate("/dashboard");
+      navigate("/dashboard", { replace: true });
     } catch (err) {
       // Handled in auth context
     }
