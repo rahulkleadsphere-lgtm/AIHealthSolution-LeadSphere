@@ -8,7 +8,7 @@ class Settings(BaseSettings):
     # App Config
     APP_NAME: str = "SevaSetu AI Health Chatbot"
     DEBUG: bool = True
-    ALLOWED_ORIGINS: str = "https://health-ai-chatbot-lead-sphere.vercel.app,https://health-ai-chatbot-amber.vercel.app,https://health-ai-chatbot.vercel.app,https://health-aichatbot-production.up.railway.app,https://healthaichatbot-leadsphere-production-2f83.up.railway.app,https://healthaichatbot-leadsphere-production-0990.up.railway.app,https://healthaichatbot-leadsphere-production.up.railway.app,http://localhost:5173,http://localhost:8080,http://localhost:3000"
+    ALLOWED_ORIGINS: str = "https://aihealthsolution-leadsphere-production.up.railway.app,https://aihealthsolution-leadsphere.vercel.app,https://ai-health-solution-leadsphere.vercel.app,https://health-ai-chatbot-lead-sphere.vercel.app,https://health-ai-chatbot-amber.vercel.app,https://health-ai-chatbot.vercel.app,https://healthaichatbot-leadsphere-production-2f83.up.railway.app,http://localhost:5173,http://localhost:8080,http://localhost:3000"
     
     # DB Config (Can be URL or components)
     DATABASE_URL: Optional[str] = None

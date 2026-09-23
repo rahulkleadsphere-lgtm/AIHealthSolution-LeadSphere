@@ -26,13 +26,23 @@ print("[INFO] Backend service is initializing...")
 # Middleware
 settings = get_settings()
 allowed_origins = [o.strip() for o in settings.ALLOWED_ORIGINS.split(",") if o.strip()]
-for local_origin in ["http://localhost:5173", "http://127.0.0.1:5173", "http://localhost:8080", "http://localhost:3000"]:
-    if local_origin not in allowed_origins:
-        allowed_origins.append(local_origin)
+for extra_origin in [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "http://localhost:8080",
+    "http://localhost:3000",
+    "https://aihealthsolution-leadsphere-production.up.railway.app",
+    "https://aihealthsolution-leadsphere.vercel.app",
+    "https://ai-health-solution-leadsphere.vercel.app",
+    "https://ai-health-solution-lead-sphere.vercel.app",
+]:
+    if extra_origin not in allowed_origins:
+        allowed_origins.append(extra_origin)
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,
+    allow_origin_regex=r"^https?:\/\/([a-zA-Z0-9_\-]+\.)*(vercel\.app|railway\.app|localhost|127\.0\.0\.1)(:\d+)?$",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
