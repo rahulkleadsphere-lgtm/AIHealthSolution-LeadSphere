@@ -7,7 +7,7 @@ const supabaseUrl =
 
 const supabaseAnonKey = 
   import.meta.env.VITE_SUPABASE_ANON_KEY || 
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhhdnB0YnV0YWR0cmpyY2VucW1rIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MjY3NTAwMDAsImV4cCI6MjA0MjMyNjAwMH0.placeholder";
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhhdnB0YnV0YWR0cmpyY2VucW1rIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAwNjYxMzUsImV4cCI6MjEwNTY0MjEzNX0.D8-gkvPbMyCvDKbAUrMJ_59kMvggXgFPPCnkAza6s8g";
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
