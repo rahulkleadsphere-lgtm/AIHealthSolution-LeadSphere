@@ -70,7 +70,8 @@ tmp/
 .env
 .env.*
 *.env
-env.*
+env.production
+env.local
 env (*)*
 secret.txt
 credentials*.json
@@ -79,9 +80,11 @@ service-account*.json
 *.key
 *.cert
 
-# Allow safe example templates
+# Allow safe example templates & TypeScript definition files
 !**/.env.example
 !.env.example
+!**/src/env.d.ts
+!**/src/vite-env.d.ts
 
 # ---------------------------------------------------------------------
 # 6. Python Artifacts & Environments
@@ -99,8 +102,6 @@ dist/
 downloads/
 eggs/
 .eggs/
-lib/
-lib64/
 parts/
 sdist/
 var/
@@ -109,6 +110,9 @@ wheels/
 .installed.cfg
 *.egg
 MANIFEST
+
+# Explicitly ensure frontend source library is never ignored
+!**/src/lib/**
 
 # ---------------------------------------------------------------------
 # 7. Node.js & Frontend Artifacts

@@ -51,13 +51,17 @@ pnpm-debug.log*
 .env
 .env.*
 *.env
-env.*
+env.production
+env.local
 env (*)*
 secret.txt
 credentials*.json
 
-# Allow example configs
+# Allow example configs & TypeScript definitions
 !.env.example
+!src/lib/**
+!src/env.d.ts
+!src/vite-env.d.ts
 
 # ---------------------------------------------------------------------
 # 6. Scratch & Temporary Files
