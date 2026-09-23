@@ -263,7 +263,7 @@ This batch file validates Python and Node dependencies, launches the FastAPI ser
 3. Set the build command to `pip install -r requirements.txt`.
 4. Set the start command to `uvicorn app.main:app --host 0.0.0.0 --port $PORT`.
 5. Add all required environment variables (`DATABASE_URL`, `GROQ_API_KEY`, `QDRANT_URL`, `QDRANT_API_KEY`, `CLOUDINARY_*`).
-6. Verify deployment at: `https://<YOUR-RAILWAY-DOMAIN>/api/health`.
+6. Verify deployment at: `https://aihealthsolution-leadsphere-production.up.railway.app/`.
 
 ### Frontend Deployment (Vercel)
 1. In Vercel, import the repository and specify the **Root Directory** as `AI-Health-Chatbot-n8n-main`.
@@ -272,7 +272,7 @@ This batch file validates Python and Node dependencies, launches the FastAPI ser
 4. Output Directory: `dist`.
 5. Add Environment Variable:
    ```env
-   VITE_API_BASE_URL=https://<YOUR-RAILWAY-DOMAIN>/api
+   VITE_API_BASE_URL=https://aihealthsolution-leadsphere-production.up.railway.app/api
    ```
 6. Deploy and assign your custom domain.
 

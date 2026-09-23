@@ -2,17 +2,19 @@ import { toast } from "sonner";
 
 export const getApiBaseUrl = (): string => {
   const envUrl = import.meta.env.VITE_API_BASE_URL;
-  // Automatically route legacy railway subdomains to the active updated railway instance
-  if (
-    envUrl &&
-    (envUrl.includes("healthaichatbot-leadsphere-production.up.railway.app") ||
-     envUrl.includes("healthaichatbot-leadsphere-production-0990.up.railway.app"))
-  ) {
-    return "https://healthaichatbot-leadsphere-production-2f83.up.railway.app/api";
+  if (envUrl) {
+    let clean = envUrl.trim().replace(/\/+$/, '');
+    if (!clean.endsWith('/api') && !clean.includes('/api/')) {
+      clean = `${clean}/api`;
+    }
+    // Route any legacy Railway subdomains to the active updated railway instance
+    if (clean.includes("healthaichatbot-leadsphere-production")) {
+      return "https://aihealthsolution-leadsphere-production.up.railway.app/api";
+    }
+    return clean;
   }
-  if (envUrl) return envUrl;
   if (import.meta.env.PROD) {
-    return "https://healthaichatbot-leadsphere-production-2f83.up.railway.app/api";
+    return "https://aihealthsolution-leadsphere-production.up.railway.app/api";
   }
   return "http://localhost:8000/api";
 };
