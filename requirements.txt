@@ -1,0 +1,24 @@
+fastapi
+uvicorn
+sqlalchemy
+pymysql
+psycopg2-binary
+pydantic[email]
+pydantic-settings
+email-validator
+groq
+pytesseract
+Pillow
+cloudinary
+faiss-cpu
+fastembed
+# openai-whisper (removed for initial deployment stability)
+# TTS (removed for initial deployment stability)
+python-multipart
+python-jose[cryptography]
+passlib[bcrypt]
+bcrypt
+alembic
+numpy
+gunicorn
+qdrant-client

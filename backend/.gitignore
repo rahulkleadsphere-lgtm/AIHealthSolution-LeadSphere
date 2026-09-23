@@ -1,0 +1,116 @@
+# =====================================================================
+# Backend Git Ignore
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# 1. Tests & Quality Assurance
+# ---------------------------------------------------------------------
+test_*.py
+*_test.py
+tests/
+__tests__/
+.pytest_cache/
+.coverage
+htmlcov/
+nosetests.xml
+coverage.xml
+*,cover
+.hypothesis/
+.cache/
+
+# ---------------------------------------------------------------------
+# 2. Seed Data & Seeding Scripts
+# ---------------------------------------------------------------------
+seed_*.py
+*_seed.py
+seeds/
+seeders/
+seed_*.sql
+scripts/seed_*.py
+scripts/test_*.py
+scripts/verify_*.py
+hospital_directory.json
+*.seed
+
+# ---------------------------------------------------------------------
+# 3. Check, Verification & Audit Scripts
+# ---------------------------------------------------------------------
+check_*.py
+verify_*.py
+debug_*.py
+
+# ---------------------------------------------------------------------
+# 4. Scratch & Temporary Files
+# ---------------------------------------------------------------------
+scratch/
+scratchpad*
+temp/
+tmp/
+*.tmp
+*.temp
+*.bak
+*.old
+
+# ---------------------------------------------------------------------
+# 5. Python Artifacts & Environments
+# ---------------------------------------------------------------------
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+ENV/
+env/
+python/
+
+# Build and Distribution
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# ---------------------------------------------------------------------
+# 6. Environment Variables & Credentials
+# ---------------------------------------------------------------------
+.env
+.env.*
+*.env
+env.*
+env (*)*
+secret.txt
+credentials*.json
+service-account*.json
+*.pem
+*.key
+
+# Allow example configs
+!.env.example
+
+# ---------------------------------------------------------------------
+# 7. Databases & Logs
+# ---------------------------------------------------------------------
+*.sqlite
+*.sqlite3
+*.db
+*.log
+
+# ---------------------------------------------------------------------
+# 8. OS & IDE
+# ---------------------------------------------------------------------
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

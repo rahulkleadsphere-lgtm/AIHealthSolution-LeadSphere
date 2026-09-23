@@ -1,0 +1,21 @@
+{
+  "name": "SevaSetu AI Health Portal",
+  "short_name": "SevaSetu",
+  "description": "Intelligent Health Assistance for Rural India. Access AI consultation, medical analysis, and government schemes.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#2563eb",
+  "icons": [
+    {
+      "src": "/logo-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/logo-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
