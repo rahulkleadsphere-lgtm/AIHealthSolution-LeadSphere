@@ -288,16 +288,29 @@ class MemoryService:
             memory_lines.append(f"- {m.memory_type.upper()}: {m.key.title()} — {m.value}{date_suffix}{status_tag}")
         memories_block = "\n".join(memory_lines) if memory_lines else "No specific recorded health events."
 
+        is_demo_rahul = user_id == "rahul_mumbai_demo"
+        patient_name = user.name or ("Rahul Sharma" if is_demo_rahul else "Patient")
+        patient_age = str(user.age) if user.age else ("21" if is_demo_rahul else "Not specified")
+        patient_gender = user.gender or ("Male" if is_demo_rahul else "Not specified")
+        patient_blood = user.blood_group or ("O+" if is_demo_rahul else "Not specified")
+        patient_location = f"{user.district or 'India'}"
+
+        baseline_note = (
+            "- Longitudinal Biomarker Baseline: Hemoglobin trending upwards from 11.8 to 13.1 g/dL; Fasting Glucose reduced from 145 to 112 mg/dL."
+            if is_demo_rahul
+            else "- Longitudinal Biomarker Baseline: Verified against patient's dynamically uploaded diagnostic documents."
+        )
+
         context = f"""
-### VERIFIED PATIENT HEALTH IDENTITY (From Supabase):
-- Patient Name: {user.name or 'Rahul Sharma'}
-- Age: {user.age or '21'} | Gender: {user.gender or 'Male'} | Blood Group: {user.blood_group or 'O+'}
-- Location: {user.district or 'Mumbai'}, Maharashtra
+### VERIFIED PATIENT HEALTH IDENTITY:
+- Patient Name: {patient_name}
+- Age: {patient_age} | Gender: {patient_gender} | Blood Group: {patient_blood}
+- Location: {patient_location}
 - Confirmed Allergies: {allergies_str} (CRITICAL: Never recommend medications with cross-reactivity)
 - Chronic Conditions: {conditions_str}
 - Secondary Clinical Memories:
 {memories_block}
-- Longitudinal Biomarker Baseline: Hemoglobin trending upwards from 11.8 to 13.1 g/dL; Fasting Glucose reduced from 145 to 112 mg/dL.
-- Applicable Welfare Schemes: MJPJAY (Maharashtra ₹5L), Ayushman Bharat PM-JAY (₹5L cashless cover).
+{baseline_note}
+- Applicable Welfare Schemes: Ayushman Bharat PM-JAY (₹5L cashless cover), National Digital Health Mission.
 """
         return context

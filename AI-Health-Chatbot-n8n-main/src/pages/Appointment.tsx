@@ -79,8 +79,8 @@ const Appointment: React.FC = () => {
   });
   const [timeSlot, setTimeSlot] = useState("10:15 AM");
   const [name, setName] = useState(user?.name || "");
-  const [phone, setPhone] = useState("");
-  const [abhaId, setAbhaId] = useState("");
+  const [phone, setPhone] = useState(user?.profile?.phone || "");
+  const [abhaId, setAbhaId] = useState(user?.profile?.abha_id || "");
   const [symptoms, setSymptoms] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
@@ -88,7 +88,12 @@ const Appointment: React.FC = () => {
 
   React.useEffect(() => {
     document.title = "Schedule Clinical Visit | SevaSetu Health";
-  }, []);
+    if (user) {
+      if (user.name) setName(user.name);
+      if (user.profile?.phone) setPhone(user.profile.phone);
+      if (user.profile?.abha_id) setAbhaId(user.profile.abha_id);
+    }
+  }, [user]);
 
   const selectedFacilityObj = CLINIC_FACILITIES.find(f => f.id === facility) || CLINIC_FACILITIES[0];
 

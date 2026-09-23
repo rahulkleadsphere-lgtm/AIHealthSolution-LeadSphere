@@ -57,7 +57,7 @@ export const chatService = {
     }
   },
 
-  async getChatSessions(userId: string = "rahul_mumbai_demo") {
+  async getChatSessions(userId: string = "guest_patient") {
     try {
       const response = await fetch(`${API_BASE_URL}/chat/sessions/${userId}`);
       if (!response.ok) throw new Error("Failed to fetch sessions");
@@ -79,7 +79,7 @@ export const chatService = {
     }
   },
 
-  async createNewSession(userId: string = "rahul_mumbai_demo", title: string = "New Consultation") {
+  async createNewSession(userId: string = "guest_patient", title: string = "New Consultation") {
     try {
       const response = await fetch(`${API_BASE_URL}/chat/session/new`, {
         method: 'POST',
@@ -107,7 +107,7 @@ export const chatService = {
     }
   },
 
-  async getChatHistory(userId: string = "rahul_mumbai_demo", limit: number = 50) {
+  async getChatHistory(userId: string = "guest_patient", limit: number = 50) {
     try {
       const response = await fetch(`${API_BASE_URL}/chat/history/${userId}?limit=${limit}`);
       if (!response.ok) {
@@ -120,7 +120,7 @@ export const chatService = {
     }
   },
 
-  async clearChatHistory(userId: string = "rahul_mumbai_demo") {
+  async clearChatHistory(userId: string = "guest_patient") {
     try {
       const response = await fetch(`${API_BASE_URL}/chat/history/${userId}`, {
         method: 'DELETE'
@@ -486,6 +486,23 @@ export const authService = {
       return await response.json();
     } catch (error) {
       console.error("Signup API Error:", error);
+      throw error;
+    }
+  },
+  async oauthSync(data: { id: string; email: string; name?: string }) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/oauth-sync`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({ detail: "OAuth sync failed" }));
+        throw new Error(error.detail || "OAuth sync failed");
+      }
+      return await response.json();
+    } catch (error) {
+      console.error("OAuth Sync API Error:", error);
       throw error;
     }
   }

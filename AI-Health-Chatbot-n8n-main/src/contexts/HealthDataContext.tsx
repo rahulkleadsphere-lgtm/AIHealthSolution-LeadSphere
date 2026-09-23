@@ -102,7 +102,7 @@ interface HealthDataContextType {
   recordVital: (key: string, value: string, sourceContext?: string) => Promise<void>;
 }
 
-const STORAGE_KEY = "seva_health_data_dynamic_v2";
+const getUserStorageKey = (uid?: string) => (uid ? `seva_health_data_${uid}` : "seva_health_data_guest");
 
 const HealthDataContext = createContext<HealthDataContextType | undefined>(undefined);
 
@@ -111,79 +111,68 @@ export const HealthDataProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [serverVitals, setServerVitals] = useState<Array<{ key: string; value: string; source_context?: string }>>([]);
 
-  // Initialize with zero mock data - loads from local cache or stays clean empty array
+  // Initialize with empty array - loaded dynamically per authenticated user
   const [documents, setDocuments] = useState<MedicalDocument[]>(() => {
     try {
-      const stored = localStorage.getItem(STORAGE_KEY);
+      const stored = localStorage.getItem("seva_user");
+      const uid = stored ? JSON.parse(stored)?.id : undefined;
+      const cached = uid ? localStorage.getItem(getUserStorageKey(uid)) : null;
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed.documents)) return parsed.documents;
+      }
+    } catch (e) {}
+    return [];
+  });
+
+  const [hemoglobinHistory, setHemoglobinHistory] = useState<VitalTrajectoryPoint[]>([]);
+  const [glucoseHistory, setGlucoseHistory] = useState<VitalTrajectoryPoint[]>([]);
+  const [imagingScans, setImagingScans] = useState<ImagingScanRecord[]>([]);
+  const [recentActivities, setRecentActivities] = useState<ActivityItem[]>([]);
+
+  // Synchronize dynamic local state whenever authenticated user switches or logs in/out
+  useEffect(() => {
+    if (!user?.id) {
+      setDocuments([]);
+      setHemoglobinHistory([]);
+      setGlucoseHistory([]);
+      setImagingScans([]);
+      setRecentActivities([]);
+      setServerVitals([]);
+      return;
+    }
+
+    try {
+      const stored = localStorage.getItem(getUserStorageKey(user.id));
       if (stored) {
         const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed.documents)) {
-          return parsed.documents;
-        }
+        setDocuments(Array.isArray(parsed.documents) ? parsed.documents : []);
+        setHemoglobinHistory(Array.isArray(parsed.hemoglobinHistory) ? parsed.hemoglobinHistory : []);
+        setGlucoseHistory(Array.isArray(parsed.glucoseHistory) ? parsed.glucoseHistory : []);
+        setImagingScans(Array.isArray(parsed.imagingScans) ? parsed.imagingScans : []);
+        setRecentActivities(Array.isArray(parsed.recentActivities) ? parsed.recentActivities : []);
+      } else {
+        setDocuments([]);
+        setHemoglobinHistory([]);
+        setGlucoseHistory([]);
+        setImagingScans([]);
+        setRecentActivities([]);
       }
     } catch (e) {
-      console.warn("Could not load health data from localStorage", e);
+      setDocuments([]);
+      setHemoglobinHistory([]);
+      setGlucoseHistory([]);
+      setImagingScans([]);
+      setRecentActivities([]);
     }
-    return [];
-  });
+  }, [user?.id]);
 
-  const [hemoglobinHistory, setHemoglobinHistory] = useState<VitalTrajectoryPoint[]>(() => {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed.hemoglobinHistory)) {
-          return parsed.hemoglobinHistory;
-        }
-      }
-    } catch (e) {}
-    return [];
-  });
-
-  const [glucoseHistory, setGlucoseHistory] = useState<VitalTrajectoryPoint[]>(() => {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed.glucoseHistory)) {
-          return parsed.glucoseHistory;
-        }
-      }
-    } catch (e) {}
-    return [];
-  });
-
-  const [imagingScans, setImagingScans] = useState<ImagingScanRecord[]>(() => {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed.imagingScans)) {
-          return parsed.imagingScans;
-        }
-      }
-    } catch (e) {}
-    return [];
-  });
-
-  const [recentActivities, setRecentActivities] = useState<ActivityItem[]>(() => {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed.recentActivities)) {
-          return parsed.recentActivities;
-        }
-      }
-    } catch (e) {}
-    return [];
-  });
-
-  // Persist combined dynamic state to localStorage
+  // Persist combined dynamic state to user-specific localStorage key
   useEffect(() => {
+    if (!user?.id) return;
     try {
       localStorage.setItem(
-        STORAGE_KEY,
+        getUserStorageKey(user.id),
         JSON.stringify({
           documents,
           hemoglobinHistory,
@@ -195,7 +184,7 @@ export const HealthDataProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     } catch (e) {
       console.warn("Failed to persist health data to localStorage", e);
     }
-  }, [documents, hemoglobinHistory, glucoseHistory, imagingScans, recentActivities]);
+  }, [user?.id, documents, hemoglobinHistory, glucoseHistory, imagingScans, recentActivities]);
 
   // Extract vitals and imaging metrics from raw report documents
   const parseDocumentVitals = useCallback((doc: MedicalDocument) => {
@@ -345,7 +334,11 @@ export const HealthDataProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
   // Sync with backend API
   const syncWithBackend = useCallback(async () => {
-    const activeUserId = user?.id || "rahul_mumbai_demo";
+    if (!user?.id) {
+      setIsLoading(false);
+      return;
+    }
+    const activeUserId = user.id;
     try {
       setIsLoading(true);
       const repRes = await analysisService.getReports(activeUserId);
@@ -409,16 +402,16 @@ export const HealthDataProvider: React.FC<{ children: React.ReactNode }> = ({ ch
           };
         });
 
-        setDocuments((prev) => {
-          const idMap = new Map(prev.map((d) => [d.id, d]));
-          fetchedDocs.forEach((d) => idMap.set(d.id, d));
-          const merged = Array.from(idMap.values());
-          // Sort chronologically for parsing vitals (oldest to newest)
-          const chronological = [...merged].sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
-          chronological.forEach((d) => parseDocumentVitals(d));
-          // Display documents list newest first
-          return [...merged].sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
-        });
+        // Set documents strictly for this active user
+        setDocuments(fetchedDocs);
+        setHemoglobinHistory([]);
+        setGlucoseHistory([]);
+        const chronological = [...fetchedDocs].sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
+        chronological.forEach((d) => parseDocumentVitals(d));
+      } else {
+        setDocuments([]);
+        setHemoglobinHistory([]);
+        setGlucoseHistory([]);
       }
 
       // Fetch verified health memories & recorded vitals from backend
@@ -426,16 +419,18 @@ export const HealthDataProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         const vitalsRes = await analysisService.getVitals(activeUserId);
         if (vitalsRes?.vitals && Array.isArray(vitalsRes.vitals)) {
           setServerVitals(vitalsRes.vitals);
+        } else {
+          setServerVitals([]);
         }
       } catch (err) {
-        console.warn("Could not fetch server vitals:", err);
+        setServerVitals([]);
       }
     } catch (e) {
       console.warn("Backend sync notice: using current local health store.", e);
     } finally {
       setIsLoading(false);
     }
-  }, [user, parseDocumentVitals]);
+  }, [user?.id, parseDocumentVitals]);
 
   useEffect(() => {
     syncWithBackend();
@@ -444,7 +439,7 @@ export const HealthDataProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   // Record a vital measurement directly and persist to backend
   const recordVital = useCallback(
     async (key: string, value: string, sourceContext?: string) => {
-      const activeUserId = user?.id || "rahul_mumbai_demo";
+      const activeUserId = user?.id || "guest_patient";
       const cleanKey = key.trim().toLowerCase();
       try {
         await analysisService.recordVital(activeUserId, {
@@ -976,7 +971,7 @@ export const HealthDataProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       setGlucoseHistory((prev) => prev.filter((g) => g.sourceDoc !== matchTitle));
     }
     try {
-      const activeUserId = user?.id || "rahul_mumbai_demo";
+      const activeUserId = user?.id || "guest_patient";
       await analysisService.deleteSingleReport(activeUserId, effectiveId, effectiveTitle);
     } catch (e) {
       console.warn("Backend delete notice:", e);
@@ -991,7 +986,7 @@ export const HealthDataProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     summary: string;
     biomarkers?: string;
   }): Promise<MedicalDocument> => {
-    const activeUserId = user?.id || "rahul_mumbai_demo";
+    const activeUserId = user?.id || "guest_patient";
     let backendId = `vault_${Date.now()}`;
     try {
       const res = await analysisService.createVaultReport(activeUserId, {
@@ -1020,18 +1015,21 @@ export const HealthDataProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   }, [user, addUploadedDocument]);
 
   const clearAllHealthData = useCallback(async () => {
-    localStorage.removeItem(STORAGE_KEY);
+    if (user?.id) {
+      localStorage.removeItem(getUserStorageKey(user.id));
+    }
     setDocuments([]);
     setHemoglobinHistory([]);
     setGlucoseHistory([]);
     setImagingScans([]);
     setRecentActivities([]);
+    setServerVitals([]);
     try {
-      const activeUserId = user?.id || "rahul_mumbai_demo";
+      const activeUserId = user?.id || "guest_patient";
       await analysisService.clearReports(activeUserId);
     } catch (e) {}
     toast.info("All health records cleared from Vault and database.");
-  }, [user]);
+  }, [user?.id]);
 
   const contextValue = useMemo(() => ({
     documents,

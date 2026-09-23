@@ -420,10 +420,8 @@ async def chat_endpoint(request: ChatRequest, db: Session = Depends(get_db)):
 @router.get("/chat/sessions")
 @router.get("/chat/sessions/{userId}")
 async def get_chat_sessions(userId: Optional[str] = None, user_id: Optional[str] = None, db: Session = Depends(get_db)):
-    effective_id = userId or user_id or "rahul_mumbai_demo"
+    effective_id = userId or user_id or "guest_patient"
     episodes = db.query(ChatEpisode).filter(ChatEpisode.user_id == effective_id).order_by(ChatEpisode.created_at.desc()).all()
-    if not episodes and effective_id != "rahul_mumbai_demo":
-        episodes = db.query(ChatEpisode).filter(ChatEpisode.user_id == "rahul_mumbai_demo").order_by(ChatEpisode.created_at.desc()).all()
     
     result = []
     for ep in episodes:
@@ -464,7 +462,7 @@ async def get_session_messages(sessionId: str, db: Session = Depends(get_db)):
     }
 
 class CreateSessionRequest(BaseModel):
-    user_id: Optional[str] = "rahul_mumbai_demo"
+    user_id: Optional[str] = "guest_patient"
     title: Optional[str] = "New Consultation"
     summary: Optional[str] = ""
     tags: Optional[str] = "General Health"
@@ -474,7 +472,7 @@ async def create_chat_session(data: CreateSessionRequest, db: Session = Depends(
     new_id = f"ep_{int(datetime.datetime.utcnow().timestamp()*1000)}"
     new_ep = ChatEpisode(
         id=new_id,
-        user_id=data.user_id or "rahul_mumbai_demo",
+        user_id=data.user_id or "guest_patient",
         title=data.title or "New Consultation",
         summary=data.summary or "",
         tags=data.tags or "General Health",
@@ -505,7 +503,7 @@ async def delete_chat_session(sessionId: str, db: Session = Depends(get_db)):
 @router.get("/chat/history")
 @router.get("/chat/history/{userId}")
 async def get_chat_history(userId: Optional[str] = None, user_id: Optional[str] = None, limit: int = 50, db: Session = Depends(get_db)):
-    effective_id = userId or user_id or "rahul_mumbai_demo"
+    effective_id = userId or user_id or "guest_patient"
     history = db.query(ChatHistory).filter(ChatHistory.user_id == effective_id).order_by(ChatHistory.created_at.asc()).limit(limit).all()
     return {
         "status": "success",
@@ -525,7 +523,7 @@ async def get_chat_history(userId: Optional[str] = None, user_id: Optional[str] 
 @router.delete("/chat/history")
 @router.delete("/chat/history/{userId}")
 async def clear_chat_history(userId: Optional[str] = None, user_id: Optional[str] = None, db: Session = Depends(get_db)):
-    effective_id = userId or user_id or "rahul_mumbai_demo"
+    effective_id = userId or user_id or "guest_patient"
     db.query(ChatHistory).filter(ChatHistory.user_id == effective_id).delete()
     db.commit()
     return {"status": "success", "user_id": effective_id, "message": "Chat history cleared."}

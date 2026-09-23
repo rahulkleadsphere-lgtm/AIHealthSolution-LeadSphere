@@ -68,3 +68,37 @@ def get_user_by_email(db: Session, email: str):
 
 def get_user_by_id(db: Session, user_id: str):
     return db.query(User).filter(User.id == user_id).first()
+
+def create_oauth_user(
+    db: Session,
+    user_id: str,
+    name: str,
+    email: str
+) -> User:
+    u_rand = str(uuid.uuid4().int)
+    clean_abha = f"91-{u_rand[:4]}-{u_rand[4:8]}-{u_rand[8:12]}"
+    
+    new_user = User(
+        id=user_id,
+        name=name or "Citizen Patient",
+        email=email.lower().strip(),
+        hashed_password=hash_password(str(uuid.uuid4())),
+        role="user",
+        blood_group="",
+        weight="",
+        height="",
+        age="",
+        gender="",
+        district="",
+        primary_condition="None",
+        allergies="[]",
+        conditions="[]",
+        emergency_contacts="[]",
+        abha_id=clean_abha,
+        bio="Verified citizen account via Google Authentication.",
+        profile_completion_pct=60
+    )
+    db.add(new_user)
+    db.commit()
+    db.refresh(new_user)
+    return new_user

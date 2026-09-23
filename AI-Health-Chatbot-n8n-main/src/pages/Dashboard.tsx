@@ -135,26 +135,31 @@ export const Dashboard: React.FC = () => {
   } = useHealthData();
 
   const [loading, setLoading] = useState(true);
-  const [profile, setProfile] = useState<any>({
-    name: "Rahul Sharma",
-    age: "21",
-    gender: "Male",
-    blood_group: "O+",
-    district: "Mumbai",
-    abha_id: "91-8273-4920-1124",
-    profile_completion_pct: 82,
-    allergies: ["Penicillin"],
-    conditions: [],
+  const [profile, setProfile] = useState<any>(() => ({
+    name: user?.name || "Patient Citizen",
+    age: user?.profile?.age || "--",
+    gender: user?.profile?.gender || "--",
+    blood_group: user?.profile?.blood_group || "--",
+    district: user?.district || user?.profile?.district || "India",
+    abha_id: user?.profile?.abha_id || "--",
+    profile_completion_pct: user?.profile?.profile_completion_pct || 65,
+    allergies: user?.profile?.allergies || [],
+    conditions: (user?.profile as any)?.conditions || [],
     medications: []
-  });
+  }));
 
-  const [upcomingAppointment, setUpcomingAppointment] = useState<any>({
-    facility: "KEM Hospital & Cardiac Research",
-    location: "Parel, Mumbai",
-    date: "28 Sep 2026",
-    time: "10:30 AM",
-    phone: "+91 22 2410 7000",
-    specialty: "Cardiovascular Checkup & ECG"
+  const [upcomingAppointment, setUpcomingAppointment] = useState<any>(() => {
+    if (user?.id === "rahul_mumbai_demo") {
+      return {
+        facility: "KEM Hospital & Cardiac Research",
+        location: "Parel, Mumbai",
+        date: "28 Sep 2026",
+        time: "10:30 AM",
+        phone: "+91 22 2410 7000",
+        specialty: "Cardiovascular Checkup & ECG"
+      };
+    }
+    return null;
   });
 
   // UI Interactive States
@@ -172,40 +177,53 @@ export const Dashboard: React.FC = () => {
   useEffect(() => {
     document.title = "Personal Health Dashboard | SevaSetu AI";
     const fetchDashboardData = async () => {
-      const activeId = user?.id || "rahul_mumbai_demo";
+      if (!user?.id) {
+        setLoading(false);
+        return;
+      }
+      const activeId = user.id;
       try {
-        // 1. Fetch live user profile from Supabase PostgreSQL
+        // 1. Fetch live user profile from PostgreSQL
         const res = await profileService.getProfile(activeId);
         if (res?.status === "success" && res.user) {
           const u = res.user;
           const p = u.profile || {};
           
           setProfile({
-            name: u.name || "Rahul Sharma",
-            age: p.age || u.age || "21",
-            gender: u.gender || p.gender || "Male",
-            blood_group: p.blood_group || u.blood_group || "O+",
-            district: u.district || p.district || "Mumbai",
-            abha_id: u.abha_id || p.abha_id || "91-8273-4920-1124",
-            profile_completion_pct: u.profile_completion_pct || 82,
-            allergies: Array.isArray(u.allergies) ? u.allergies : ["Penicillin"],
+            name: u.name || user.name || "Patient Citizen",
+            age: p.age || u.age || "--",
+            gender: u.gender || p.gender || "--",
+            blood_group: p.blood_group || u.blood_group || "--",
+            district: u.district || p.district || "India",
+            abha_id: u.abha_id || p.abha_id || "--",
+            profile_completion_pct: u.profile_completion_pct || 75,
+            allergies: Array.isArray(u.allergies) ? u.allergies : [],
             conditions: Array.isArray(u.conditions) ? u.conditions : [],
             medications: Array.isArray(u.medications) ? u.medications : []
           });
         }
 
-        // 2. Fetch live appointments from Supabase
+        // 2. Fetch live appointments for this active user
         const apptRes = await appointmentService.getAppointments(activeId);
         if (apptRes?.appointments && apptRes.appointments.length > 0) {
           const firstAppt = apptRes.appointments[0];
           setUpcomingAppointment({
-            facility: firstAppt.facility_name || "KEM Hospital & Cardiac Research",
-            location: "Mumbai",
-            date: firstAppt.appointment_date ? new Date(firstAppt.appointment_date).toLocaleDateString("en-IN", { day: '2-digit', month: 'short', year: 'numeric' }) : "28 Sep 2026",
+            facility: firstAppt.facility_name || "Primary Health Centre",
+            location: firstAppt.location || "Clinical Wing",
+            date: firstAppt.appointment_date ? new Date(firstAppt.appointment_date).toLocaleDateString("en-IN", { day: '2-digit', month: 'short', year: 'numeric' }) : "Upcoming",
             time: "10:30 AM",
-            phone: firstAppt.phone_number || "+91 22 2410 7000",
+            phone: firstAppt.phone_number || "",
             specialty: firstAppt.symptoms || "Consultation & Follow-up"
           });
+        } else {
+          setUpcomingAppointment(user.id === "rahul_mumbai_demo" ? {
+            facility: "KEM Hospital & Cardiac Research",
+            location: "Parel, Mumbai",
+            date: "28 Sep 2026",
+            time: "10:30 AM",
+            phone: "+91 22 2410 7000",
+            specialty: "Cardiovascular Checkup & ECG"
+          } : null);
         }
       } catch (e) {
         console.warn("Could not load backend profile, using local state.", e);
@@ -306,7 +324,7 @@ export const Dashboard: React.FC = () => {
     };
   }, [latestVitals]);
 
-  // Chart trajectories with graceful fallback baseline
+  // Chart trajectories with graceful fallback baseline for demo persona only
   const hbChartData = useMemo(() => {
     if (hemoglobinHistory.length > 0) {
       return hemoglobinHistory.map((h) => ({
@@ -316,12 +334,15 @@ export const Dashboard: React.FC = () => {
         status: h.status
       }));
     }
-    return [
-      { date: "May '26", value: 12.4, unit: "g/dL", status: "Mildly Low" },
-      { date: "Jul '26", value: 12.9, unit: "g/dL", status: "Borderline" },
-      { date: "Sep '26", value: 13.6, unit: "g/dL", status: "Target Reached" }
-    ];
-  }, [hemoglobinHistory]);
+    if (user?.id === "rahul_mumbai_demo") {
+      return [
+        { date: "May '26", value: 12.4, unit: "g/dL", status: "Mildly Low" },
+        { date: "Jul '26", value: 12.9, unit: "g/dL", status: "Borderline" },
+        { date: "Sep '26", value: 13.6, unit: "g/dL", status: "Target Reached" }
+      ];
+    }
+    return [];
+  }, [hemoglobinHistory, user?.id]);
 
   const glucoseChartData = useMemo(() => {
     if (glucoseHistory.length > 0) {
@@ -332,12 +353,15 @@ export const Dashboard: React.FC = () => {
         status: g.status
       }));
     }
-    return [
-      { date: "May '26", value: 114, unit: "mg/dL", status: "Elevated" },
-      { date: "Jul '26", value: 102, unit: "mg/dL", status: "Improving" },
-      { date: "Sep '26", value: 92, unit: "mg/dL", status: "Normal Fasting" }
-    ];
-  }, [glucoseHistory]);
+    if (user?.id === "rahul_mumbai_demo") {
+      return [
+        { date: "May '26", value: 114, unit: "mg/dL", status: "Elevated" },
+        { date: "Jul '26", value: 102, unit: "mg/dL", status: "Improving" },
+        { date: "Sep '26", value: 92, unit: "mg/dL", status: "Normal Fasting" }
+      ];
+    }
+    return [];
+  }, [glucoseHistory, user?.id]);
 
   // Filtered Activities
   const filteredActivities = useMemo(() => {
@@ -783,53 +807,73 @@ export const Dashboard: React.FC = () => {
                   </Badge>
                 </div>
 
-                <div className="h-[210px] w-full">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart
-                      data={chartMetric === "hb" ? hbChartData : glucoseChartData}
-                      margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
-                    >
-                      <defs>
-                        <linearGradient id="hbGradientLight" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#10b981" stopOpacity={0.25} />
-                          <stop offset="95%" stopColor="#10b981" stopOpacity={0.0} />
-                        </linearGradient>
-                        <linearGradient id="glucoseGradientLight" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#2563eb" stopOpacity={0.25} />
-                          <stop offset="95%" stopColor="#2563eb" stopOpacity={0.0} />
-                        </linearGradient>
-                      </defs>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
-                      <XAxis dataKey="date" tick={{ fontSize: 11, fill: "#64748B" }} tickLine={false} axisLine={{ stroke: "#CBD5E1" }} />
-                      <YAxis
-                        domain={chartMetric === "hb" ? [10, 18] : [60, 150]}
-                        tick={{ fontSize: 11, fill: "#64748B" }}
-                        tickLine={false}
-                        axisLine={false}
-                      />
-                      <Tooltip content={<ClinicalChartTooltip />} />
-                      <ReferenceLine
-                        y={chartMetric === "hb" ? 13.0 : 100}
-                        stroke={chartMetric === "hb" ? "#059669" : "#2563eb"}
-                        strokeDasharray="4 4"
-                        label={{
-                          value: chartMetric === "hb" ? "13.0 Normal Min" : "100 mg/dL Target",
-                          fill: chartMetric === "hb" ? "#059669" : "#2563eb",
-                          fontSize: 10,
-                          position: "insideTopRight"
-                        }}
-                      />
-                      <Area
-                        type="monotone"
-                        dataKey="value"
-                        stroke={chartMetric === "hb" ? "#059669" : "#2563eb"}
-                        strokeWidth={2.5}
-                        fillOpacity={1}
-                        fill={chartMetric === "hb" ? "url(#hbGradientLight)" : "url(#glucoseGradientLight)"}
-                        activeDot={{ r: 5, strokeWidth: 2, stroke: "#fff" }}
-                      />
-                    </AreaChart>
-                  </ResponsiveContainer>
+                <div className="h-[210px] w-full flex items-center justify-center">
+                  {(chartMetric === "hb" ? hbChartData : glucoseChartData).length > 0 ? (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <AreaChart
+                        data={chartMetric === "hb" ? hbChartData : glucoseChartData}
+                        margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
+                      >
+                        <defs>
+                          <linearGradient id="hbGradientLight" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#10b981" stopOpacity={0.25} />
+                            <stop offset="95%" stopColor="#10b981" stopOpacity={0.0} />
+                          </linearGradient>
+                          <linearGradient id="glucoseGradientLight" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#2563eb" stopOpacity={0.25} />
+                            <stop offset="95%" stopColor="#2563eb" stopOpacity={0.0} />
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
+                        <XAxis dataKey="date" tick={{ fontSize: 11, fill: "#64748B" }} tickLine={false} axisLine={{ stroke: "#CBD5E1" }} />
+                        <YAxis
+                          domain={chartMetric === "hb" ? [10, 18] : [60, 150]}
+                          tick={{ fontSize: 11, fill: "#64748B" }}
+                          tickLine={false}
+                          axisLine={false}
+                        />
+                        <Tooltip content={<ClinicalChartTooltip />} />
+                        <ReferenceLine
+                          y={chartMetric === "hb" ? 13.0 : 100}
+                          stroke={chartMetric === "hb" ? "#059669" : "#2563eb"}
+                          strokeDasharray="4 4"
+                          label={{
+                            value: chartMetric === "hb" ? "13.0 Normal Min" : "100 mg/dL Target",
+                            fill: chartMetric === "hb" ? "#059669" : "#2563eb",
+                            fontSize: 10,
+                            position: "insideTopRight"
+                          }}
+                        />
+                        <Area
+                          type="monotone"
+                          dataKey="value"
+                          stroke={chartMetric === "hb" ? "#059669" : "#2563eb"}
+                          strokeWidth={2.5}
+                          fillOpacity={1}
+                          fill={chartMetric === "hb" ? "url(#hbGradientLight)" : "url(#glucoseGradientLight)"}
+                          activeDot={{ r: 5, strokeWidth: 2, stroke: "#fff" }}
+                        />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center p-4 text-center">
+                      <Activity className="w-8 h-8 text-slate-300 mb-1.5 stroke-[1.5]" />
+                      <p className="text-xs font-bold text-slate-700">No {chartMetric === "hb" ? "Hemoglobin" : "Glucose"} records yet</p>
+                      <p className="text-[11px] text-slate-400 max-w-xs mt-0.5">
+                        Upload your diagnostic lab report or record your vital sign to plot your personalized clinical trajectory.
+                      </p>
+                      <div className="flex gap-2 mt-3">
+                        <Link to="/analysis" className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold transition-all shadow-xs flex items-center gap-1.5">
+                          <Upload className="w-3 h-3" />
+                          Upload Report
+                        </Link>
+                        <button onClick={() => setLogModalOpen(true)} className="px-3 py-1.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5">
+                          <Plus className="w-3 h-3" />
+                          Record Vital
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -1087,33 +1131,60 @@ export const Dashboard: React.FC = () => {
                   <Building2 className="w-5 h-5 text-indigo-600" />
                   Upcoming Clinical Visit
                 </h3>
-                <Badge className="bg-indigo-50 text-indigo-700 border border-indigo-200 font-bold text-[10px]">
-                  Confirmed
-                </Badge>
+                {upcomingAppointment ? (
+                  <Badge className="bg-indigo-50 text-indigo-700 border border-indigo-200 font-bold text-[10px]">
+                    Confirmed
+                  </Badge>
+                ) : (
+                  <Badge className="bg-slate-100 text-slate-600 border border-slate-200 font-bold text-[10px]">
+                    None Scheduled
+                  </Badge>
+                )}
               </div>
 
-              <div className="p-4 rounded-2xl bg-indigo-50/50 border border-indigo-100 space-y-3">
-                <div>
-                  <h4 className="font-bold text-sm text-slate-900">{upcomingAppointment.facility}</h4>
-                  <p className="text-xs text-slate-500 flex items-center gap-1 mt-0.5">
-                    <MapPin className="w-3.5 h-3.5 text-slate-400" />
-                    {upcomingAppointment.location} • {upcomingAppointment.specialty}
+              {upcomingAppointment ? (
+                <div className="p-4 rounded-2xl bg-indigo-50/50 border border-indigo-100 space-y-3">
+                  <div>
+                    <h4 className="font-bold text-sm text-slate-900">{upcomingAppointment.facility}</h4>
+                    <p className="text-xs text-slate-500 flex items-center gap-1 mt-0.5">
+                      <MapPin className="w-3.5 h-3.5 text-slate-400" />
+                      {upcomingAppointment.location} • {upcomingAppointment.specialty}
+                    </p>
+                  </div>
+
+                  <div className="flex items-center justify-between pt-2 border-t border-indigo-100 text-xs text-slate-700">
+                    <span className="font-semibold flex items-center gap-1">
+                      <Calendar className="w-3.5 h-3.5 text-indigo-600" />
+                      {upcomingAppointment.date} • {upcomingAppointment.time}
+                    </span>
+                    {upcomingAppointment.phone ? (
+                      <a 
+                        href={`tel:${upcomingAppointment.phone}`} 
+                        className="font-bold text-indigo-700 hover:underline flex items-center gap-1"
+                      >
+                        <PhoneCall className="w-3 h-3" /> Call Desk
+                      </a>
+                    ) : null}
+                  </div>
+                </div>
+              ) : (
+                <div className="p-5 rounded-2xl bg-slate-50/80 border border-dashed border-slate-200 text-center space-y-2">
+                  <Calendar className="w-7 h-7 text-slate-300 mx-auto stroke-[1.5]" />
+                  <p className="text-xs font-bold text-slate-700">No appointments scheduled</p>
+                  <p className="text-[11px] text-slate-500 max-w-xs mx-auto">
+                    Connect with government civil hospitals or book an instant tele-consultation.
                   </p>
+                  <div className="pt-1">
+                    <Link
+                      to="/appointment"
+                      className="inline-flex py-2 px-3.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold items-center gap-1.5 shadow-xs transition-colors"
+                    >
+                      <Plus className="w-3 h-3" />
+                      Book Consultation
+                    </Link>
+                  </div>
                 </div>
-
-                <div className="flex items-center justify-between pt-2 border-t border-indigo-100 text-xs text-slate-700">
-                  <span className="font-semibold flex items-center gap-1">
-                    <Calendar className="w-3.5 h-3.5 text-indigo-600" />
-                    {upcomingAppointment.date} • {upcomingAppointment.time}
-                  </span>
-                  <a 
-                    href={`tel:${upcomingAppointment.phone}`} 
-                    className="font-bold text-indigo-700 hover:underline flex items-center gap-1"
-                  >
-                    <PhoneCall className="w-3 h-3" /> Call Desk
-                  </a>
-                </div>
-              </div>
+              )}
 
               <div className="pt-1">
                 <Link 

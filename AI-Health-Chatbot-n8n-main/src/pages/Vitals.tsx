@@ -166,12 +166,12 @@ export const Vitals: React.FC = () => {
       if (isLikelyImaging) {
         analysisData = await analysisService.analyzeImage(
           processedFile,
-          user?.id || "rahul_mumbai_demo"
+          user?.id || "guest_patient"
         );
       } else {
         analysisData = await analysisService.analyzeReport(
           processedFile,
-          user?.id || "rahul_mumbai_demo"
+          user?.id || "guest_patient"
         );
       }
 

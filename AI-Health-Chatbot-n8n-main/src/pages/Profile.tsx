@@ -89,13 +89,15 @@ const Profile: React.FC = () => {
   // Active Settings Tab
   const [activeTab, setActiveTab] = useState<SettingsTab>("profile");
 
-  // Profile Image State
+  // Profile Image State (Scoped to current user)
   const [profileImage, setProfileImage] = useState<string | null>(() => {
     try {
-      const stored = localStorage.getItem("sevasetu_profile_image");
+      const storedUser = localStorage.getItem("seva_user");
+      const uid = storedUser ? JSON.parse(storedUser)?.id : undefined;
+      const stored = uid ? localStorage.getItem(`sevasetu_profile_image_${uid}`) : null;
       if (stored && stored.includes("images.unsplash.com")) {
         const defaultCartoon = "https://api.dicebear.com/7.x/adventurer/svg?seed=Aarav&backgroundColor=b6e3f4,c0aede,d1d4f9";
-        localStorage.setItem("sevasetu_profile_image", defaultCartoon);
+        if (uid) localStorage.setItem(`sevasetu_profile_image_${uid}`, defaultCartoon);
         window.dispatchEvent(new Event("sevasetu_profile_image_updated"));
         return defaultCartoon;
       }
@@ -113,27 +115,28 @@ const Profile: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isSavingProfile, setIsSavingProfile] = useState(false);
 
-  // Form State
-  const [formData, setFormData] = useState<any>({
-    name: "Rahul Sharma",
-    email: "rahul@sevasetu.in",
-    phone: "+91 98765 43210",
-    blood_group: "O+",
-    weight: "68",
-    height: "174",
-    age: "21",
-    gender: "Male",
-    district: "Mumbai",
+  // Form State - Dynamically initialized from active authenticated user
+  const [formData, setFormData] = useState<any>(() => ({
+    name: user?.name || "",
+    email: user?.email || "",
+    phone: (user as any)?.phone || "",
+    blood_group: user?.profile?.blood_group || "O+",
+    weight: user?.profile?.weight?.replace(/[^0-9.]/g, "") || "",
+    height: user?.profile?.height?.replace(/[^0-9.]/g, "") || "",
+    age: user?.profile?.age?.replace(/[^0-9]/g, "") || "",
+    gender: user?.profile?.gender || "Male",
+    district: user?.district || user?.profile?.district || "Mumbai",
     state: "Maharashtra",
     pincode: "400012",
-    primary_condition: "None (Preventive Fitness)",
-    allergies: ["Penicillin", "Dust Mites"],
-    conditions: ["Seasonal Bronchial Allergy"],
-    emergency_name: "Sunita Sharma (Mother)",
-    emergency_phone: "+91 98201 12345",
-    bio: "Student in Mumbai. Focused on preventive fitness & family care.",
-    organ_donor: true,
-  });
+    primary_condition: user?.profile?.primary_condition || "None (Preventive Care)",
+    allergies: user?.profile?.allergies || [],
+    conditions: (user?.profile as any)?.conditions || [],
+    emergency_name: (user as any)?.emergency_contact_name || "",
+    emergency_phone: (user as any)?.emergency_contact_phone || "",
+    bio: user?.profile?.bio || "",
+    organ_donor: false,
+    abha_id: user?.profile?.abha_id || (user as any)?.abha_id || "",
+  }));
 
   const [newAllergy, setNewAllergy] = useState("");
   const [newCondition, setNewCondition] = useState("");
@@ -170,7 +173,10 @@ const Profile: React.FC = () => {
 
   // Load Profile from Backend / Local Cache
   const loadProfileAndHistory = async () => {
-    if (!user?.id) return;
+    if (!user?.id) {
+      setIsLoading(false);
+      return;
+    }
     try {
       setIsLoading(true);
       const profileRes = await profileService.getProfile(user.id);
@@ -178,21 +184,51 @@ const Profile: React.FC = () => {
         const u = profileRes.user;
         const p = u.profile || {};
         setProfileData(p);
-        setFormData((prev: any) => ({
-          ...prev,
-          name: u.name || prev.name,
-          email: u.email || prev.email,
-          blood_group: p.blood_group || prev.blood_group,
-          weight: p.weight?.replace(/[^0-9.]/g, "") || prev.weight,
-          height: p.height?.replace(/[^0-9.]/g, "") || prev.height,
-          age: p.age?.replace(/[^0-9]/g, "") || prev.age,
-          gender: p.gender || prev.gender,
-          district: u.district || prev.district,
-          primary_condition: p.primary_condition || prev.primary_condition,
-          allergies: u.allergies?.length ? u.allergies : prev.allergies,
-          conditions: u.conditions?.length ? u.conditions : prev.conditions,
-          bio: p.bio || prev.bio,
-        }));
+        setFormData({
+          name: u.name || user.name || "",
+          email: u.email || user.email || "",
+          phone: u.phone || (user as any).phone || "",
+          blood_group: p.blood_group || u.blood_group || "O+",
+          weight: p.weight?.replace(/[^0-9.]/g, "") || "",
+          height: p.height?.replace(/[^0-9.]/g, "") || "",
+          age: p.age?.replace(/[^0-9]/g, "") || "",
+          gender: p.gender || u.gender || "Male",
+          district: u.district || p.district || "Mumbai",
+          state: "Maharashtra",
+          pincode: "400012",
+          primary_condition: p.primary_condition || u.primary_condition || "None",
+          allergies: Array.isArray(u.allergies) ? u.allergies : (p.allergies || []),
+          conditions: Array.isArray(u.conditions) ? u.conditions : (p.conditions || []),
+          emergency_name: (user as any).emergency_contact_name || "",
+          emergency_phone: (user as any).emergency_contact_phone || "",
+          bio: p.bio || u.bio || "",
+          organ_donor: false,
+          abha_id: u.abha_id || p.abha_id || (user as any).abha_id || "",
+        });
+      } else {
+        const p = user.profile || {};
+        setProfileData(p);
+        setFormData({
+          name: user.name || "",
+          email: user.email || "",
+          phone: (user as any).phone || "",
+          blood_group: p.blood_group || "O+",
+          weight: p.weight?.replace(/[^0-9.]/g, "") || "",
+          height: p.height?.replace(/[^0-9.]/g, "") || "",
+          age: p.age?.replace(/[^0-9]/g, "") || "",
+          gender: p.gender || "Male",
+          district: user.district || p.district || "Mumbai",
+          state: "Maharashtra",
+          pincode: "400012",
+          primary_condition: p.primary_condition || "None",
+          allergies: p.allergies || [],
+          conditions: (p as any).conditions || [],
+          emergency_name: (user as any).emergency_contact_name || "",
+          emergency_phone: (user as any).emergency_contact_phone || "",
+          bio: p.bio || "",
+          organ_donor: false,
+          abha_id: p.abha_id || (user as any).abha_id || "",
+        });
       }
 
       // Fetch appointments
@@ -254,7 +290,8 @@ const Profile: React.FC = () => {
         const base64Url = event.target?.result as string;
         if (base64Url) {
           setProfileImage(base64Url);
-          localStorage.setItem("sevasetu_profile_image", base64Url);
+          const key = user?.id ? `sevasetu_profile_image_${user.id}` : "sevasetu_profile_image";
+          localStorage.setItem(key, base64Url);
           window.dispatchEvent(new Event("sevasetu_profile_image_updated"));
           toast.success("Profile photo updated successfully!");
           setIsAvatarModalOpen(false);
@@ -273,7 +310,8 @@ const Profile: React.FC = () => {
   // Handle Preset Avatar Selection
   const handleSelectPresetAvatar = (url: string) => {
     setProfileImage(url);
-    localStorage.setItem("sevasetu_profile_image", url);
+    const key = user?.id ? `sevasetu_profile_image_${user.id}` : "sevasetu_profile_image";
+    localStorage.setItem(key, url);
     window.dispatchEvent(new Event("sevasetu_profile_image_updated"));
     toast.success("Avatar updated!");
     setIsAvatarModalOpen(false);
@@ -282,7 +320,8 @@ const Profile: React.FC = () => {
   // Handle Remove Avatar
   const handleRemoveAvatar = () => {
     setProfileImage(null);
-    localStorage.removeItem("sevasetu_profile_image");
+    const key = user?.id ? `sevasetu_profile_image_${user.id}` : "sevasetu_profile_image";
+    localStorage.removeItem(key);
     window.dispatchEvent(new Event("sevasetu_profile_image_updated"));
     toast.info("Profile photo removed. Initial monogram restored.");
     setIsAvatarModalOpen(false);
@@ -290,9 +329,10 @@ const Profile: React.FC = () => {
 
   // Copy ABHA ID
   const handleCopyAbha = () => {
-    navigator.clipboard.writeText("91-8273-4920-1124");
+    const abha = formData.abha_id || profileData?.abha_id || user?.profile?.abha_id || (user as any)?.abha_id || "Unassigned";
+    navigator.clipboard.writeText(abha);
     setCopiedAbha(true);
-    toast.success("ABHA ID copied to clipboard!");
+    toast.success(`ABHA ID ${abha} copied to clipboard!`);
     setTimeout(() => setCopiedAbha(false), 2500);
   };
 

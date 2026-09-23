@@ -164,7 +164,7 @@ const Chat: React.FC = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(true);
   const [sessionSearch, setSessionSearch] = useState("");
 
-  const effectiveUserId = user?.id || "rahul_mumbai_demo";
+  const effectiveUserId = user?.id || "guest_patient";
 
   // Voice hook
   const { isListening, isTranscribing, transcript, startListening, speak, stopSpeaking, setTranscript } = useVoice(
@@ -177,11 +177,22 @@ const Chat: React.FC = () => {
     };
   }, [stopSpeaking]);
   
+  const getWelcomeGreeting = useCallback(() => {
+    const baseWelcome = t("chat.welcome") || "Namaste! I am SevaSetu Health Assistant.";
+    if (!user?.name) {
+      return `${baseWelcome} How can I assist your health today?`;
+    }
+    const bg = user.profile?.blood_group ? `Blood Group: **${user.profile.blood_group}**` : "";
+    const validAllergies = (user.profile?.allergies || []).filter(a => a && a.toLowerCase() !== "none");
+    const allergyStr = validAllergies.length > 0 ? `Confirmed Allergies: **${validAllergies.join(", ")}**` : "No known drug allergies";
+    const profileDetails = [bg, allergyStr].filter(Boolean).join(", ");
+    return `${baseWelcome} Welcome back, **${user.name}**! Your verified health identity is active (${profileDetails}). How can I assist your health today?`;
+  }, [user, t]);
+
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "welcome",
-      text: (t("chat.welcome") || "Namaste! I am SevaSetu Health Assistant.") + 
-        (user?.name ? ` Welcome back, **${user.name}**! Your verified health identity is active (Blood Group: **${user.profile?.blood_group || 'O+'}**, Confirmed Allergies: **Penicillin**). How can I assist your health today?` : " How can I assist your health today?"),
+      text: getWelcomeGreeting(),
       isUser: false,
       timestamp: new Date(),
     }
@@ -199,9 +210,21 @@ const Chat: React.FC = () => {
         const sessionToSelect = targetSessionId || activeSessionId || res.sessions[0].id;
         setActiveSessionId(sessionToSelect);
         loadSessionDialogue(sessionToSelect);
+      } else {
+        setSessions([]);
+        setActiveSessionId(null);
+        setMessages([
+          {
+            id: "welcome-init",
+            text: getWelcomeGreeting(),
+            isUser: false,
+            timestamp: new Date(),
+          }
+        ]);
       }
     } catch (err) {
       console.error("Failed to load chat sessions:", err);
+      setSessions([]);
     }
   };
 
@@ -246,8 +269,10 @@ const Chat: React.FC = () => {
     }
   };
 
-  // Initial load: fetch sessions
+  // Initial load: fetch sessions when active user changes
   useEffect(() => {
+    setSessions([]);
+    setActiveSessionId(null);
     loadSessions();
   }, [effectiveUserId]);
 
@@ -265,8 +290,7 @@ const Chat: React.FC = () => {
     setMessages([
       {
         id: "welcome-fresh",
-        text: (t("chat.welcome") || "Namaste! I am SevaSetu Health Assistant.") + 
-          (user?.name ? ` Welcome back, **${user.name}**! Your verified health identity is active (Blood Group: **${user.profile?.blood_group || 'O+'}**, Confirmed Allergies: **Penicillin**). How can I assist your health today?` : " How can I assist your health today?"),
+        text: getWelcomeGreeting(),
         isUser: false,
         timestamp: new Date(),
       }
@@ -418,7 +442,7 @@ const Chat: React.FC = () => {
 
   const handleConfirmMemory = async (pendingMemory: PendingMemory, messageId: string) => {
     try {
-      const userId = user?.id || "rahul_mumbai_demo";
+      const userId = user?.id || "guest_patient";
       await profileService.confirmMemory(userId, {
         memory_type: pendingMemory.memory_type,
         key: pendingMemory.key,
@@ -771,7 +795,7 @@ const Chat: React.FC = () => {
                   )}
                 </div>
                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter truncate hidden sm:block">
-                  Verified Identity Synchronized: Rahul Sharma (O+, Penicillin Allergy) • Longitudinal Database Active
+                  Verified Identity Synchronized: {user?.name || "Patient"} ({user?.profile?.blood_group || "ABHA Profile"}{user?.profile?.allergies?.length ? `, ${user.profile.allergies.join(", ")}` : ""}) • Longitudinal Database Active
                 </p>
               </div>
             </div>

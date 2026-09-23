@@ -1,5 +1,6 @@
-import React, { createContext, useContext, useState, useRef, useEffect } from "react";
+import React, { createContext, useContext, useState, useRef, useEffect, useCallback } from "react";
 import { toast } from "sonner";
+import { useAuth } from "./AuthContext";
 
 export interface Notification {
   id: number;
@@ -77,42 +78,81 @@ const REAL_CLINICAL_NOTIFICATIONS: Notification[] = [
 ];
 
 export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { user } = useAuth();
+  const notifKey = user?.id ? `seva_notifications_${user.id}` : "seva_notifications_guest";
+
+  const getInitialNotifications = useCallback((): Notification[] => {
+    if (user?.id === "rahul_mumbai_demo") {
+      return REAL_CLINICAL_NOTIFICATIONS;
+    }
+    return [
+      {
+        id: 101,
+        title: "Clinical Profile & Vault Ready",
+        message: `Welcome to SevaSetu Health, ${user?.name || "Patient Citizen"}! Your private health records vault and AI consultations are active.`,
+        type: "success",
+        time: "Just now",
+        icon: "verified_user",
+        color: "bg-emerald-600 text-white",
+        read: false
+      }
+    ];
+  }, [user]);
+
   const [notifications, setNotifications] = useState<Notification[]>(() => {
     try {
-      const stored = localStorage.getItem("seva_notifications");
+      const storedUser = localStorage.getItem("seva_user");
+      const uid = storedUser ? JSON.parse(storedUser)?.id : undefined;
+      const key = uid ? `seva_notifications_${uid}` : "seva_notifications_guest";
+      const stored = localStorage.getItem(key);
       if (stored) {
         const parsed = JSON.parse(stored);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          // Filter out legacy demo/placeholder records (Pune heatwave, Dr. Mehta, Polio drive)
-          const filtered = parsed.filter(n => 
-            n && typeof n === 'object' &&
-            !String(n.title || '').toLowerCase().includes("heatwave") &&
-            !String(n.message || '').toLowerCase().includes("pune") &&
-            !String(n.message || '').toLowerCase().includes("dr. mehta") &&
-            !String(n.title || '').toLowerCase().includes("polio drive")
-          );
-          if (filtered.length > 0) {
-            return filtered;
-          }
+          return parsed;
         }
       }
-    } catch (e) {
-      console.error("Failed to load stored notifications", e);
-    }
-    return REAL_CLINICAL_NOTIFICATIONS;
+      if (uid === "rahul_mumbai_demo") return REAL_CLINICAL_NOTIFICATIONS;
+    } catch (e) {}
+    return [
+      {
+        id: 101,
+        title: "Clinical Profile & Vault Ready",
+        message: "Welcome to SevaSetu Health! Your private health records vault and AI consultations are active.",
+        type: "success",
+        time: "Just now",
+        icon: "verified_user",
+        color: "bg-emerald-600 text-white",
+        read: false
+      }
+    ];
   });
 
   const [activeReminders, setActiveReminders] = useState<ScheduledReminder[]>([]);
   const timeoutsRef = useRef<{ [id: string]: ReturnType<typeof setTimeout> }>({});
 
+  // Reload notifications whenever authenticated user changes
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(notifKey);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed)) {
+          setNotifications(parsed);
+          return;
+        }
+      }
+    } catch (e) {}
+    setNotifications(getInitialNotifications());
+  }, [notifKey, getInitialNotifications]);
+
   // Persist notifications whenever they change
   useEffect(() => {
     try {
-      localStorage.setItem("seva_notifications", JSON.stringify(notifications));
+      localStorage.setItem(notifKey, JSON.stringify(notifications));
     } catch (e) {
       console.error("Failed to persist notifications", e);
     }
-  }, [notifications]);
+  }, [notifKey, notifications]);
 
   // Request browser Notification permission on first interaction
   useEffect(() => {
@@ -147,15 +187,16 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
   const clearAllNotifications = () => {
     setNotifications([]);
-    localStorage.setItem("seva_notifications", JSON.stringify([]));
-    localStorage.setItem("seva_notifications_cleared", "true");
+    localStorage.setItem(notifKey, JSON.stringify([]));
+    localStorage.setItem(`${notifKey}_cleared`, "true");
     toast.success("Cleared all notifications.");
   };
 
   const resetToClinicalNotifications = () => {
-    setNotifications(REAL_CLINICAL_NOTIFICATIONS);
-    localStorage.removeItem("seva_notifications_cleared");
-    localStorage.setItem("seva_notifications", JSON.stringify(REAL_CLINICAL_NOTIFICATIONS));
+    const list = getInitialNotifications();
+    setNotifications(list);
+    localStorage.removeItem(`${notifKey}_cleared`);
+    localStorage.setItem(notifKey, JSON.stringify(list));
     toast.success("Synchronized real clinical alerts from Supabase profile.");
   };
 

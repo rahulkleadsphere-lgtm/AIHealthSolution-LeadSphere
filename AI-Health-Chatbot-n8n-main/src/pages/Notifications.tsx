@@ -35,7 +35,7 @@ const Notifications: React.FC = () => {
               Stay <span className="text-blue-600 italic underline decoration-blue-200 decoration-8">Informed</span>.
             </h1>
             <p className="text-xs sm:text-sm font-semibold text-slate-500 mt-2">
-              Real-time clinical alerts, appointment reminders, and welfare updates for {user?.name || "Rahul Sharma"}.
+              Real-time clinical alerts, appointment reminders, and welfare updates for {user?.name || "Patient"}.
             </p>
           </div>
 
@@ -56,7 +56,7 @@ const Notifications: React.FC = () => {
                 </button>
                 <button 
                   onClick={resetToClinicalNotifications}
-                  title="Re-sync Rahul Sharma's verified records from Supabase"
+                  title="Re-sync notifications"
                   className="p-2 text-slate-600 hover:text-blue-600 bg-white border border-slate-200 hover:border-blue-300 rounded-xl transition-all shadow-xs active:scale-95"
                 >
                   <RefreshCw className="w-4 h-4" />
@@ -209,16 +209,16 @@ const Notifications: React.FC = () => {
             </h3>
           </div>
           <p className="text-xs text-slate-600 leading-relaxed font-medium">
-            Connected to <strong>Mumbai Health District Registry</strong> &amp; <strong>KEM Hospital Parel Trauma Center</strong>. Real-time audio alerts are powered by the Web Audio API.
+            Connected to <strong>{user?.profile?.district ? `${user.profile.district} Health District Registry` : "National Digital Health Mission"}</strong>. Real-time audio alerts are powered by the Web Audio API.
           </p>
           <p className="text-[11px] font-mono text-slate-400 font-semibold">
-            ABHA ID: 91-8273-4920-1124 • Blood Group: O+ • Verified Patient: Rahul Sharma
+            ABHA ID: {user?.profile?.abha_id || "ABHA Active"} • Blood Group: {user?.profile?.blood_group || "Registered"} • Verified Patient: {user?.name || "Patient"}
           </p>
         </div>
 
         <div className="flex items-center gap-3 shrink-0">
           <div className="px-4 py-2 bg-white rounded-xl border border-slate-200 text-xs font-bold text-slate-700 shadow-2xs">
-            District: Mumbai
+            District: {user?.profile?.district || "India"}
           </div>
           <div className="px-4 py-2 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-xl text-xs font-black shadow-2xs">
             100% Online

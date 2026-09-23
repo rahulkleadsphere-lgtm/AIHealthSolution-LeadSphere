@@ -65,18 +65,20 @@ export const HealthVault: React.FC = () => {
     setCurrentPage(1);
   }, [selectedCategory, searchQuery, sortBy]);
 
+  const userAbha = user?.profile?.abha_id || (user as any)?.abha_id || "Unassigned";
+
   const handleCopyAbha = () => {
-    navigator.clipboard.writeText("91-8273-4920-1124");
+    navigator.clipboard.writeText(userAbha);
     setCopiedAbha(true);
-    toast.success("ABHA ID copied to clipboard!");
+    toast.success(`ABHA ID ${userAbha} copied to clipboard!`);
     setTimeout(() => setCopiedAbha(false), 2500);
   };
 
   const handleExportVaultIndex = () => {
     const exportData = {
       vault_title: "SevaSetu Personal Health Records Vault",
-      abha_id: "91-8273-4920-1124",
-      user_id: user?.id || "rahul_mumbai_demo",
+      abha_id: userAbha,
+      user_id: user?.id || "guest_patient",
       exported_at: new Date().toISOString(),
       total_records: documents.length,
       categories_breakdown: vaultCounts,
@@ -177,7 +179,7 @@ export const HealthVault: React.FC = () => {
                   title="Click to copy ABHA ID"
                 >
                   <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-                  ABHA: 91-8273-4920-1124
+                  ABHA: {userAbha}
                   {copiedAbha ? (
                     <Check className="w-3 h-3 text-emerald-600 ml-0.5" />
                   ) : (

@@ -66,37 +66,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (storedUser) {
         return JSON.parse(storedUser);
       }
-      if (localStorage.getItem("seva_logged_out") === "true") {
-        return null;
-      }
     } catch (e) {
       console.error("Failed to parse stored user", e);
     }
-    // Default to Rahul Sharma verified profile for seamless instant evaluation
-    const defaultPersona: User = {
-      id: "rahul_mumbai_demo",
-      name: "Rahul Sharma",
-      email: "rahul@sevasetu.in",
-      role: "user",
-      district: "Mumbai",
-      profile: {
-        bio: "Student in Mumbai. Focused on preventive fitness & family care.",
-        blood_group: "O+",
-        weight: "68 kg",
-        height: "174 cm",
-        age: "21",
-        gender: "Male",
-        district: "Mumbai",
-        primary_condition: "None",
-        allergies: ["Penicillin"],
-        abha_id: "91-8273-4920-1124",
-        profile_completion_pct: 88,
-      },
-    };
-    try {
-      localStorage.setItem("seva_user", JSON.stringify(defaultPersona));
-    } catch (e) {}
-    return defaultPersona;
+    return null;
   });
 
   const [isLoading, setIsLoading] = useState(false);
@@ -113,37 +86,45 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           "Citizen Patient";
         const email = gUser.email || "";
 
-        let existingProfile: UserProfile = {
-          bio: "Verified citizen account via Google Authentication.",
-          blood_group: "O+",
-          weight: "68 kg",
-          height: "174 cm",
-          age: "22",
-          gender: "Male",
-          district: "Mumbai",
-          primary_condition: "None (Preventive Care)",
-          allergies: ["None"],
-          abha_id: `91-5820-${Math.floor(1000 + Math.random() * 9000)}-${Math.floor(1000 + Math.random() * 9000)}`,
-          profile_completion_pct: 85,
-        };
-
         try {
-          const stored = localStorage.getItem("seva_user");
-          if (stored) {
-            const parsed = JSON.parse(stored);
-            if (parsed.profile) {
-              existingProfile = { ...existingProfile, ...parsed.profile };
-            }
-          }
-        } catch (e) {}
+          // Sync with backend database to register or retrieve this user
+          const syncRes = await authService.oauthSync({
+            id: gUser.id,
+            email: email,
+            name: fullName,
+          });
 
+          if (syncRes?.status === "success" && syncRes.user) {
+            setUser(syncRes.user);
+            localStorage.setItem("seva_user", JSON.stringify(syncRes.user));
+            localStorage.removeItem("seva_logged_out");
+            toast.success(`Signed in as ${syncRes.user.name}`);
+            return;
+          }
+        } catch (syncErr) {
+          console.warn("Backend OAuth sync notice:", syncErr);
+        }
+
+        // Fallback clean user profile for this Google Account
         const authenticatedUser: User = {
           id: gUser.id,
           name: fullName,
           email: email,
           role: "user",
-          district: existingProfile.district || "Mumbai",
-          profile: existingProfile,
+          district: "Mumbai",
+          profile: {
+            bio: "Verified citizen account via Google Authentication.",
+            blood_group: "",
+            weight: "",
+            height: "",
+            age: "",
+            gender: "",
+            district: "Mumbai",
+            primary_condition: "None",
+            allergies: [],
+            abha_id: `91-5820-${Math.floor(1000 + Math.random() * 9000)}-${Math.floor(1000 + Math.random() * 9000)}`,
+            profile_completion_pct: 60,
+          },
         };
 
         setUser(authenticatedUser);
@@ -247,9 +228,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const logout = async () => {
+    const currentUserId = user?.id;
     setUser(null);
     localStorage.removeItem("seva_user");
     localStorage.setItem("seva_logged_out", "true");
+    if (currentUserId) {
+      localStorage.removeItem(`seva_health_data_${currentUserId}`);
+      localStorage.removeItem(`seva_notifications_${currentUserId}`);
+      localStorage.removeItem(`sevasetu_profile_image_${currentUserId}`);
+    }
+    localStorage.removeItem("seva_health_data_dynamic_v2");
     try {
       await supabase.auth.signOut();
     } catch (e) {}

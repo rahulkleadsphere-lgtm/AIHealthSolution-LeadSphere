@@ -138,3 +138,61 @@ async def login(request: LoginRequest, db: Session = Depends(get_db)):
             }
         }
     }
+
+class OAuthSyncRequest(BaseModel):
+    id: str
+    email: EmailStr
+    name: Optional[str] = "Citizen Patient"
+
+@router.post("/oauth-sync")
+async def oauth_sync(request: OAuthSyncRequest, db: Session = Depends(get_db)):
+    # 1. Look up existing user by email or by ID
+    user = auth_service.get_user_by_email(db, request.email)
+    if not user:
+        user = auth_service.get_user_by_id(db, request.id)
+    
+    # 2. If not found, create new record in PostgreSQL
+    if not user:
+        user = auth_service.create_oauth_user(
+            db=db,
+            user_id=request.id,
+            name=request.name or "Citizen Patient",
+            email=request.email
+        )
+    else:
+        # Update name if previously blank or placeholder
+        if request.name and (not user.name or user.name == "Citizen Patient"):
+            user.name = request.name
+            db.commit()
+            db.refresh(user)
+
+    parsed_allergies = []
+    if user.allergies:
+        try:
+            parsed_allergies = json.loads(user.allergies) if user.allergies.startswith("[") else [user.allergies]
+        except Exception:
+            parsed_allergies = [user.allergies]
+
+    return {
+        "status": "success",
+        "user": {
+            "id": user.id,
+            "name": user.name,
+            "email": user.email,
+            "role": user.role,
+            "district": user.district or "Mumbai",
+            "profile": {
+                "bio": user.bio,
+                "blood_group": user.blood_group,
+                "weight": user.weight,
+                "height": user.height,
+                "age": user.age,
+                "gender": user.gender,
+                "district": user.district or "Mumbai",
+                "primary_condition": user.primary_condition,
+                "allergies": parsed_allergies,
+                "abha_id": user.abha_id,
+                "profile_completion_pct": user.profile_completion_pct or 60
+            }
+        }
+    }
