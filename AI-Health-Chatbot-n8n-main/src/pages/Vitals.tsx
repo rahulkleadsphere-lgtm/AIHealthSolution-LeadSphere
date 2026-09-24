@@ -469,30 +469,33 @@ export const Vitals: React.FC = () => {
               </div>
             </div>
 
-            <div className="flex items-center gap-3 sm:gap-4 self-end md:self-auto flex-wrap">
-              <div className="px-3.5 py-2 rounded-2xl bg-white/5 border border-white/10 flex items-center gap-2.5">
-                <Heart className="w-5 h-5 text-rose-500 fill-rose-500 animate-pulse" />
-                <div>
-                  <div className="text-[10px] uppercase font-bold text-slate-400">Live Pulse</div>
-                  <div className="text-sm font-black font-mono text-white">
-                    {liveTelemetry?.vitals?.heart_rate || latestPulseVal || 74} <span className="text-[10px] font-normal text-slate-400">BPM</span>
+            {/* Mobile Metric Grid + Action Button */}
+            <div className="w-full md:w-auto flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+              <div className="grid grid-cols-2 gap-2.5 sm:flex sm:items-center sm:gap-3">
+                <div className="px-3.5 py-2.5 rounded-2xl bg-white/5 border border-white/10 flex items-center gap-2.5">
+                  <Heart className="w-5 h-5 text-rose-500 fill-rose-500 animate-pulse shrink-0" />
+                  <div className="min-w-0">
+                    <div className="text-[10px] uppercase font-bold text-slate-400 truncate">Live Pulse</div>
+                    <div className="text-sm font-black font-mono text-white truncate">
+                      {liveTelemetry?.vitals?.heart_rate || latestPulseVal || 74} <span className="text-[10px] font-normal text-slate-400">BPM</span>
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              <div className="px-3.5 py-2 rounded-2xl bg-white/5 border border-white/10 flex items-center gap-2.5">
-                <Wind className="w-5 h-5 text-teal-400" />
-                <div>
-                  <div className="text-[10px] uppercase font-bold text-slate-400">Oxygen SpO2</div>
-                  <div className="text-sm font-black font-mono text-white">
-                    {liveTelemetry?.vitals?.spo2 || latestSpO2Val || 98}%
+                <div className="px-3.5 py-2.5 rounded-2xl bg-white/5 border border-white/10 flex items-center gap-2.5">
+                  <Wind className="w-5 h-5 text-teal-400 shrink-0" />
+                  <div className="min-w-0">
+                    <div className="text-[10px] uppercase font-bold text-slate-400 truncate">Oxygen SpO2</div>
+                    <div className="text-sm font-black font-mono text-white truncate">
+                      {liveTelemetry?.vitals?.spo2 || latestSpO2Val || 98}%
+                    </div>
                   </div>
                 </div>
               </div>
 
               <button
                 onClick={() => setIsSmartwatchModalOpen(true)}
-                className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs uppercase tracking-wider shadow-md transition-all flex items-center gap-2"
+                className="w-full sm:w-auto px-4 py-3 min-h-[44px] rounded-xl bg-emerald-600 hover:bg-emerald-500 active:scale-98 text-white font-bold text-xs uppercase tracking-wider shadow-md transition-all flex items-center justify-center gap-2 shrink-0"
               >
                 <Bluetooth className="w-4 h-4" />
                 <span>Manage Watch & Sensors</span>
