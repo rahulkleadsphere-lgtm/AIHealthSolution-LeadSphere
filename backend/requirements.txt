@@ -19,3 +19,4 @@ qdrant-client
 fastembed
 httpx
 alembic
+redis

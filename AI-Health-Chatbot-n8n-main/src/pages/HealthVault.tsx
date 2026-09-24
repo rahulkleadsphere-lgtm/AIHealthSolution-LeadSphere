@@ -29,16 +29,20 @@ import {
   Clock,
   FileCheck,
   Layers,
-  ArrowRight
+  ArrowRight,
+  Share2,
+  RefreshCw
 } from "lucide-react";
 import { PaginationControl } from "@/components/ui/PaginationControl";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { DoctorConsentModal } from "../components/DoctorConsentModal";
+import { abhaService } from "../services/api";
 import { toast } from "sonner";
 
 export const HealthVault: React.FC = () => {
   const { user } = useAuth();
-  const { documents, vaultCounts, clearAllHealthData, deleteDocument } = useHealthData();
+  const { documents, vaultCounts, clearAllHealthData, deleteDocument, addUploadedDocument } = useHealthData();
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState<string>("");
 
@@ -102,6 +106,42 @@ export const HealthVault: React.FC = () => {
     link.click();
     URL.revokeObjectURL(url);
     toast.success("Health Vault index downloaded successfully!");
+  };
+
+  const [isConsentModalOpen, setIsConsentModalOpen] = useState(false);
+  const [isSyncingHospital, setIsSyncingHospital] = useState(false);
+
+  const handleSyncHospital = async () => {
+    setIsSyncingHospital(true);
+    try {
+      const res = await abhaService.syncHospitalRecords(user?.id || "rahul_mumbai_demo", "KEM Hospital & Research Centre, Mumbai");
+      if (res.records && res.records.length > 0) {
+        for (const rec of res.records) {
+          addUploadedDocument(rec);
+        }
+        toast.success(res.message);
+      }
+    } catch (e: any) {
+      toast.error(e.message || "Failed to sync hospital records");
+    } finally {
+      setIsSyncingHospital(false);
+    }
+  };
+
+  const handleExportFhirBundle = async () => {
+    try {
+      const bundle = await abhaService.exportFhirBundle(user?.id || "rahul_mumbai_demo", documents);
+      const blob = new Blob([JSON.stringify(bundle, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `sevasetu_abdm_fhir_r4_${new Date().toISOString().split("T")[0]}.json`;
+      link.click();
+      URL.revokeObjectURL(url);
+      toast.success("HL7/FHIR R4 Diagnostic Bundle exported successfully!");
+    } catch (e: any) {
+      toast.error("Failed to export FHIR bundle");
+    }
   };
 
   const filteredDocs = documents.filter((doc) => {
@@ -242,6 +282,62 @@ export const HealthVault: React.FC = () => {
                 )}
               </div>
             </div>
+          </div>
+        </section>
+
+        {/* ========================================================= */}
+        {/* ABDM SOVEREIGN HEALTH LOCKER CONTROLS                     */}
+        {/* ========================================================= */}
+        <section className="bg-gradient-to-r from-slate-900 via-indigo-950 to-blue-950 rounded-3xl p-5 sm:p-6 text-white border border-slate-800 shadow-md flex flex-col md:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-3.5">
+            <div className="w-12 h-12 rounded-2xl bg-white/10 border border-white/20 flex items-center justify-center shrink-0 shadow-inner">
+              <ShieldCheck className="w-6 h-6 text-emerald-400" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-black uppercase tracking-wider text-emerald-400 bg-emerald-950/80 px-2 py-0.5 rounded-full border border-emerald-500/30">
+                  ABDM Sovereign Health Locker
+                </span>
+                <span className="text-[10px] font-semibold text-slate-400">
+                  ABHA: {userAbha}
+                </span>
+              </div>
+              <h3 className="text-base font-extrabold text-white mt-0.5">
+                Consent-Driven Health Data Exchange & Interoperability
+              </h3>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2.5 w-full md:w-auto">
+            <button
+              type="button"
+              onClick={() => setIsConsentModalOpen(true)}
+              className="flex-1 md:flex-initial px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl text-xs font-bold shadow-sm transition-all flex items-center justify-center gap-2 active:scale-95 cursor-pointer"
+            >
+              <Share2 className="w-4 h-4" />
+              <span>Share with Doctor (Consent Pass)</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={handleSyncHospital}
+              disabled={isSyncingHospital}
+              className="flex-1 md:flex-initial px-4 py-2.5 bg-white/10 hover:bg-white/20 border border-white/20 text-white rounded-2xl text-xs font-bold transition-all flex items-center justify-center gap-2 active:scale-95 cursor-pointer disabled:opacity-60"
+              title="Pull verified records from hospital EHR"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${isSyncingHospital ? 'animate-spin' : ''}`} />
+              <span>{isSyncingHospital ? "Syncing..." : "Sync Hospital Records (HIP)"}</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={handleExportFhirBundle}
+              className="flex-1 md:flex-initial px-4 py-2.5 bg-indigo-600/80 hover:bg-indigo-600 border border-indigo-400/30 text-white rounded-2xl text-xs font-bold transition-all flex items-center justify-center gap-2 active:scale-95 cursor-pointer"
+              title="Download HL7 FHIR R4 Bundle"
+            >
+              <FileCheck className="w-4 h-4 text-indigo-300" />
+              <span>Export FHIR R4</span>
+            </button>
           </div>
         </section>
 
@@ -947,6 +1043,15 @@ export const HealthVault: React.FC = () => {
             </div>
           </div>
         )}
+
+        {/* Doctor Consent Modal for Time-Bound Record Sharing */}
+        <DoctorConsentModal
+          isOpen={isConsentModalOpen}
+          onClose={() => setIsConsentModalOpen(false)}
+          documents={documents}
+          userName={user?.name || "Rahul Sharma"}
+          userAbha={userAbha}
+        />
 
       </div>
     </div>

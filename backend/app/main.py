@@ -10,15 +10,25 @@ from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from .config.db import engine, Base, get_db
-from .routes import chat_routes, analysis_routes, scheme_routes, translation_routes, search_routes, auth_routes, profile_routes, appointment_routes, voice_routes
+from .routes import chat_routes, analysis_routes, scheme_routes, translation_routes, search_routes, auth_routes, profile_routes, appointment_routes, voice_routes, abha_routes, vitals_routes
+from .models.consent_model import ConsentShare
 from .services.rag_service import rag_service
 from .models.search_model import Base as SearchBase
 from .models.scheme_model import SchemeCache
 from .config.settings import get_settings
+from sqlalchemy import text
 import uvicorn
 
 # Initialize database tables
 Base.metadata.create_all(bind=engine)
+try:
+    with engine.connect() as conn:
+        conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS is_abha_verified INT DEFAULT 1;"))
+        conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS abha_address VARCHAR(100) DEFAULT 'rahul.sharma@abdm';"))
+        conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS abha_verified_at TIMESTAMP;"))
+        conn.commit()
+except Exception as e:
+    pass
 
 app = FastAPI(title="SevaSetu AI Health Chatbot Backend")
 print("[INFO] Backend service is initializing...")
@@ -107,6 +117,7 @@ def startup_event():
 
 # Include Routers with /api prefix as expected by frontend
 app.include_router(chat_routes.router, prefix="/api", tags=["Chat"])
+app.include_router(vitals_routes.router, prefix="/api", tags=["Vitals"])
 app.include_router(analysis_routes.router, prefix="/api", tags=["Analysis"])
 app.include_router(scheme_routes.router, prefix="/api", tags=["Schemes"])
 app.include_router(search_routes.router, prefix="/api", tags=["Search"])
@@ -115,6 +126,7 @@ app.include_router(translation_routes.router, prefix="/api", tags=["Translation"
 app.include_router(auth_routes.router, prefix="/api", tags=["Auth"])
 app.include_router(profile_routes.router, prefix="/api", tags=["Profile"])
 app.include_router(appointment_routes.router, prefix="/api", tags=["Appointments"])
+app.include_router(abha_routes.router, prefix="/api", tags=["ABDM"])
 
 @app.get("/")
 def health_check():

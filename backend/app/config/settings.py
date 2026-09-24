@@ -50,6 +50,15 @@ class Settings(BaseSettings):
     SECRET_KEY: str = "your-secret-key"
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
+
+    # ABDM (Ayushman Bharat Digital Mission) Gateway Config
+    ABDM_CLIENT_ID: Optional[str] = None
+    ABDM_CLIENT_SECRET: Optional[str] = None
+    ABDM_GATEWAY_URL: str = "https://dev.abdm.gov.in/api/hiecm/gateway/v0.5"
+    ABDM_ABHA_SERVICE_URL: str = "https://abhasbx.abdm.gov.in/abha/api/v3"
+
+    # Redis Cache Config (Railway Redis or local fallback)
+    REDIS_URL: Optional[str] = None
     
     class Config:
         env_file = ".env"

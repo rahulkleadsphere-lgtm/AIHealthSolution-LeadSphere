@@ -65,6 +65,7 @@ import {
   Tooltip,
   ReferenceLine
 } from "recharts";
+import { AbhaGatewayModal } from "../components/AbhaGatewayModal";
 import { toast } from "sonner";
 
 // Static triage prompt chips for conversational AI
@@ -134,6 +135,7 @@ export const Dashboard: React.FC = () => {
     recordVital
   } = useHealthData();
 
+  const [isAbhaModalOpen, setIsAbhaModalOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState<any>(() => ({
     name: user?.name || "Patient Citizen",
@@ -553,6 +555,14 @@ export const Dashboard: React.FC = () => {
                   >
                     <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
                     Record Vital
+                  </button>
+                  <button
+                    onClick={() => setIsAbhaModalOpen(true)}
+                    className="py-2 px-3 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 rounded-xl text-xs font-bold text-center transition-colors border border-emerald-200 flex items-center justify-center gap-1 shadow-2xs"
+                    title="Verify or Create ABHA Card"
+                  >
+                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+                    Verify ABHA
                   </button>
                   <Link
                     to="/profile"
@@ -1450,6 +1460,22 @@ export const Dashboard: React.FC = () => {
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* ABDM / ABHA Sovereign Gateway Modal */}
+      <AbhaGatewayModal
+        isOpen={isAbhaModalOpen}
+        onClose={() => setIsAbhaModalOpen(false)}
+        currentAbhaId={profile.abha_id || "91-8273-4920-1124"}
+        userName={profile.name || "Rahul Sharma"}
+        userDistrict={profile.district || "Mumbai"}
+        onSuccess={(updated) => {
+          setProfile((prev: any) => ({
+            ...prev,
+            abha_id: updated.abha_number,
+            abha_address: updated.abha_address
+          }));
+        }}
+      />
     </div>
   );
 };

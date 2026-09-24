@@ -65,6 +65,7 @@ import { Label } from "../components/ui/label";
 import { Textarea } from "../components/ui/textarea";
 import { Switch } from "../components/ui/switch";
 import { compressImage } from "../utils/imageCompressor";
+import { AbhaGatewayModal } from "../components/AbhaGatewayModal";
 
 // Curated Cartoon & Illustrated Healthcare Avatars (No human faces)
 const PRESET_AVATARS = [
@@ -155,6 +156,7 @@ const Profile: React.FC = () => {
   const [abhaConsentVerifiedDocs, setAbhaConsentVerifiedDocs] = useState(true);
   const [abhaConsentImagingShare, setAbhaConsentImagingShare] = useState(true);
   const [abhaConsentResearch, setAbhaConsentResearch] = useState(false);
+  const [isAbhaGatewayOpen, setIsAbhaGatewayOpen] = useState(false);
 
   // Notifications State
   const [notifVitalsThreshold, setNotifVitalsThreshold] = useState(true);
@@ -1355,6 +1357,22 @@ const Profile: React.FC = () => {
                 </div>
               </div>
 
+              {/* ABDM Gateway Interactive Trigger */}
+              <div className="flex flex-wrap items-center gap-3 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setIsAbhaGatewayOpen(true)}
+                  className="px-4 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-2xl text-xs font-bold shadow-md transition-all flex items-center gap-2 cursor-pointer active:scale-95"
+                >
+                  <ShieldCheck className="w-4 h-4 text-emerald-300" />
+                  <span>ABDM Gateway: Create / Verify ABHA</span>
+                </button>
+                <span className="text-[11px] text-emerald-700 font-bold flex items-center gap-1.5 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-xl">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                  ABDM Sovereign Verified
+                </span>
+              </div>
+
               {/* ABDM Consent Matrix */}
               <div className="space-y-4 pt-2">
                 <h4 className="text-sm font-extrabold text-slate-900 uppercase tracking-wider">Patient Consent Preferences</h4>
@@ -1813,6 +1831,22 @@ const Profile: React.FC = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* ABDM / ABHA Sovereign Gateway Modal */}
+      <AbhaGatewayModal
+        isOpen={isAbhaGatewayOpen}
+        onClose={() => setIsAbhaGatewayOpen(false)}
+        currentAbhaId={formData.abha_id || "91-8273-4920-1124"}
+        userName={formData.name || "Rahul Sharma"}
+        userDistrict={formData.district || "Mumbai"}
+        onSuccess={(updated) => {
+          setFormData((prev: any) => ({
+            ...prev,
+            abha_id: updated.abha_number,
+            abha_address: updated.abha_address
+          }));
+        }}
+      />
 
     </div>
   );

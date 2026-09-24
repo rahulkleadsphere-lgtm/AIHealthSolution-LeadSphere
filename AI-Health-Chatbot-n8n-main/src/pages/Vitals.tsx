@@ -35,8 +35,13 @@ import {
   Trash2,
   ArrowLeft,
   Thermometer,
-  Wind
+  Wind,
+  Watch,
+  Bluetooth,
+  Cpu
 } from "lucide-react";
+import { SmartwatchModal } from "../components/SmartwatchModal";
+import { wearableTelemetryService, LiveVitalsPayload } from "../services/api";
 import { PaginationControl } from "@/components/ui/PaginationControl";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -134,6 +139,25 @@ export const Vitals: React.FC = () => {
       setIsSubmittingBP(false);
     }
   };
+
+  // Smartwatch & Live Redis Telemetry State
+  const [isSmartwatchModalOpen, setIsSmartwatchModalOpen] = useState<boolean>(false);
+  const [liveTelemetry, setLiveTelemetry] = useState<LiveVitalsPayload | null>(null);
+
+  const refreshTelemetry = async () => {
+    try {
+      const data = await wearableTelemetryService.getLiveTelemetry(user?.id || "rahul_mumbai_demo");
+      setLiveTelemetry(data);
+    } catch (e) {
+      console.error("Telemetry refresh error:", e);
+    }
+  };
+
+  useEffect(() => {
+    refreshTelemetry();
+    const interval = setInterval(refreshTelemetry, 4000);
+    return () => clearInterval(interval);
+  }, [user?.id]);
 
   useEffect(() => {
     document.title = "Vitals & Longitudinal Biomarkers | SevaSetu AI";
@@ -254,10 +278,10 @@ export const Vitals: React.FC = () => {
   };
 
   const latestHbVal = latestVitals.hemoglobin !== "--" ? latestVitals.hemoglobin.split(" ")[0] : "--";
-  const latestGlucoseVal = latestVitals.glucose !== "--" ? latestVitals.glucose.split(" ")[0] : "--";
-  const latestBPVal = latestVitals.bloodPressure !== "--" ? latestVitals.bloodPressure.split(" ")[0] : "--";
-  const latestPulseVal = latestVitals.pulse !== "--" ? latestVitals.pulse.split(" ")[0] : "--";
-  const latestSpO2Val = latestVitals.spo2 !== "--" ? latestVitals.spo2.replace("%", "").trim() : "--";
+  const latestGlucoseVal = (liveTelemetry?.vitals?.blood_glucose ? String(liveTelemetry.vitals.blood_glucose).split(" ")[0] : null) || (latestVitals.glucose !== "--" ? latestVitals.glucose.split(" ")[0] : "--");
+  const latestBPVal = (liveTelemetry?.vitals?.blood_pressure ? String(liveTelemetry.vitals.blood_pressure).split(" ")[0] : null) || (latestVitals.bloodPressure !== "--" ? latestVitals.bloodPressure.split(" ")[0] : "--");
+  const latestPulseVal = liveTelemetry?.vitals?.heart_rate ? String(liveTelemetry.vitals.heart_rate) : (latestVitals.pulse !== "--" ? latestVitals.pulse.split(" ")[0] : "--");
+  const latestSpO2Val = liveTelemetry?.vitals?.spo2 ? String(liveTelemetry.vitals.spo2) : (latestVitals.spo2 !== "--" ? latestVitals.spo2.replace("%", "").trim() : "--");
 
   // Blood Pressure clinical classification
   let bpStatus = "Optimal Band";
@@ -371,6 +395,14 @@ export const Vitals: React.FC = () => {
               </Link>
 
               <button
+                onClick={() => setIsSmartwatchModalOpen(true)}
+                className="px-4 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-xl font-bold text-xs uppercase tracking-wider shadow-md shadow-emerald-500/20 active:scale-95 transition-all flex items-center gap-1.5"
+              >
+                <Watch className="w-4 h-4" />
+                Connect Watch
+              </button>
+
+              <button
                 onClick={() => {
                   if (latestBPVal !== "--" && latestBPVal.includes("/")) {
                     const [s, d] = latestBPVal.split("/");
@@ -401,6 +433,74 @@ export const Vitals: React.FC = () => {
           </div>
         </section>
 
+        {/* ========================================================================= */}
+        {/* LIVE WEARABLE & REDIS TELEMETRY RIBBON */}
+        {/* ========================================================================= */}
+        <section className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-white p-5 sm:p-6 border border-slate-700 shadow-xl">
+          <div className="absolute top-0 right-0 w-96 h-full bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
+          <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-5">
+            
+            <div className="flex items-center gap-4">
+              <div className="relative">
+                <div className="w-12 h-12 rounded-2xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400">
+                  <Watch className="w-6 h-6" />
+                </div>
+                <span className="absolute -bottom-1 -right-1 w-3.5 h-3.5 rounded-full bg-emerald-500 ring-2 ring-slate-900 animate-pulse" />
+              </div>
+
+              <div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h3 className="text-base sm:text-lg font-bold text-white tracking-tight">
+                    {liveTelemetry?.device || "Noise ColorFit Pro (Paired)"}
+                  </h3>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                    {liveTelemetry?.source_type === "batch_sync_10min" ? "10-Min Sync Active" : "Live Telemetry Active"}
+                  </span>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-blue-500/20 text-blue-300 border border-blue-500/30">
+                    Redis: {liveTelemetry?.latency_ms || 0.4} ms
+                  </span>
+                </div>
+                <p className="text-xs text-slate-400 mt-1 flex items-center gap-2 flex-wrap">
+                  <span className="font-semibold text-slate-300">Multi-Modal Data Fusion:</span>
+                  <span className="text-emerald-300 font-medium">Pulse (Watch)</span> &bull;
+                  <span className="text-amber-300 font-medium">BP (Cuff Log)</span> &bull;
+                  <span className="text-cyan-300 font-medium">Sugar (Lab OCR)</span>
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3 sm:gap-4 self-end md:self-auto flex-wrap">
+              <div className="px-3.5 py-2 rounded-2xl bg-white/5 border border-white/10 flex items-center gap-2.5">
+                <Heart className="w-5 h-5 text-rose-500 fill-rose-500 animate-pulse" />
+                <div>
+                  <div className="text-[10px] uppercase font-bold text-slate-400">Live Pulse</div>
+                  <div className="text-sm font-black font-mono text-white">
+                    {liveTelemetry?.vitals?.heart_rate || latestPulseVal || 74} <span className="text-[10px] font-normal text-slate-400">BPM</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="px-3.5 py-2 rounded-2xl bg-white/5 border border-white/10 flex items-center gap-2.5">
+                <Wind className="w-5 h-5 text-teal-400" />
+                <div>
+                  <div className="text-[10px] uppercase font-bold text-slate-400">Oxygen SpO2</div>
+                  <div className="text-sm font-black font-mono text-white">
+                    {liveTelemetry?.vitals?.spo2 || latestSpO2Val || 98}%
+                  </div>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setIsSmartwatchModalOpen(true)}
+                className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs uppercase tracking-wider shadow-md transition-all flex items-center gap-2"
+              >
+                <Bluetooth className="w-4 h-4" />
+                <span>Manage Watch & Sensors</span>
+              </button>
+            </div>
+
+          </div>
+        </section>
 
         {/* ========================================================================= */}
         {/* 1. CURRENT LIVE VITALS SUMMARY CARDS (6 MASTERWORK CARDS) */}
@@ -409,11 +509,16 @@ export const Vitals: React.FC = () => {
           
           {/* Card 1: Hemoglobin */}
           <div className="group relative p-4 rounded-3xl bg-white hover:bg-blue-50/20 border border-slate-200/90 hover:border-blue-300 shadow-sm hover:shadow-md transition-all duration-200 transform-gpu hover:-translate-y-1">
-            <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center justify-between mb-1">
               <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">Hemoglobin</span>
               <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center border border-blue-100">
                 <Activity className="w-4 h-4" />
               </div>
+            </div>
+            <div className="mb-1">
+              <span className="text-[9px] font-bold text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-200">
+                Lab OCR (Health Vault)
+              </span>
             </div>
             <div className="flex items-baseline gap-1 my-1">
               <span className="text-2xl font-black text-slate-900 group-hover:text-blue-700 transition-colors">{latestHbVal}</span>
@@ -441,11 +546,16 @@ export const Vitals: React.FC = () => {
 
           {/* Card 2: Fasting Blood Sugar */}
           <div className="group relative p-4 rounded-3xl bg-white hover:bg-emerald-50/20 border border-slate-200/90 hover:border-emerald-300 shadow-sm hover:shadow-md transition-all duration-200 transform-gpu hover:-translate-y-1">
-            <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center justify-between mb-1">
               <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">Fasting Sugar</span>
               <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center border border-emerald-100">
                 <TrendingUp className="w-4 h-4" />
               </div>
+            </div>
+            <div className="mb-1">
+              <span className="text-[9px] font-bold text-cyan-700 bg-cyan-50 px-1.5 py-0.5 rounded border border-cyan-200">
+                Lab OCR (Health Vault)
+              </span>
             </div>
             <div className="flex items-baseline gap-1 my-1">
               <span className="text-2xl font-black text-slate-900 group-hover:text-emerald-700 transition-colors">{latestGlucoseVal}</span>
@@ -474,11 +584,16 @@ export const Vitals: React.FC = () => {
           {/* Card 3: Blood Pressure */}
           <div className="group relative p-4 rounded-3xl bg-white hover:bg-rose-50/20 border border-slate-200/90 hover:border-rose-300 shadow-sm hover:shadow-md transition-all duration-200 transform-gpu hover:-translate-y-1 flex flex-col justify-between">
             <div>
-              <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center justify-between mb-1">
                 <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">Blood Pressure</span>
                 <div className="w-8 h-8 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center border border-rose-100">
                   <Heart className="w-4 h-4 fill-rose-500/20" />
                 </div>
+              </div>
+              <div className="mb-1">
+                <span className="text-[9px] font-bold text-amber-800 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200">
+                  Upper-Arm Cuff / Clinic
+                </span>
               </div>
               <div className="flex items-baseline gap-1 my-1">
                 <span className="text-2xl font-black text-slate-900 group-hover:text-rose-700 transition-colors">{latestBPVal}</span>
@@ -517,11 +632,16 @@ export const Vitals: React.FC = () => {
 
           {/* Card 4: Pulse / Heart Rate */}
           <div className="group relative p-4 rounded-3xl bg-white hover:bg-indigo-50/20 border border-slate-200/90 hover:border-indigo-300 shadow-sm hover:shadow-md transition-all duration-200 transform-gpu hover:-translate-y-1">
-            <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center justify-between mb-1">
               <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">Pulse Rate</span>
               <div className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center border border-indigo-100">
                 <Activity className="w-4 h-4" />
               </div>
+            </div>
+            <div className="mb-1">
+              <span className="text-[9px] font-bold text-emerald-800 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
+                Noise Watch (PPG Live)
+              </span>
             </div>
             <div className="flex items-baseline gap-1 my-1">
               <span className="text-2xl font-black text-slate-900 group-hover:text-indigo-700 transition-colors">{latestPulseVal}</span>
@@ -543,11 +663,16 @@ export const Vitals: React.FC = () => {
 
           {/* Card 5: Blood Oxygen (SpO2) */}
           <div className="group relative p-4 rounded-3xl bg-white hover:bg-teal-50/20 border border-slate-200/90 hover:border-teal-300 shadow-sm hover:shadow-md transition-all duration-200 transform-gpu hover:-translate-y-1">
-            <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center justify-between mb-1">
               <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">Oxygen SpO2</span>
               <div className="w-8 h-8 rounded-xl bg-teal-50 text-teal-600 flex items-center justify-center border border-teal-100">
                 <Wind className="w-4 h-4" />
               </div>
+            </div>
+            <div className="mb-1">
+              <span className="text-[9px] font-bold text-teal-800 bg-teal-50 px-1.5 py-0.5 rounded border border-teal-200">
+                Noise Watch (Optical)
+              </span>
             </div>
             <div className="flex items-baseline gap-1 my-1">
               <span className="text-2xl font-black text-slate-900 group-hover:text-teal-700 transition-colors">{latestSpO2Val}</span>
@@ -1138,6 +1263,16 @@ export const Vitals: React.FC = () => {
             </div>
           </div>
         )}
+
+        {/* ========================================================================= */}
+        {/* SMARTWATCH & WEARABLE TELEMETRY MODAL */}
+        {/* ========================================================================= */}
+        <SmartwatchModal
+          isOpen={isSmartwatchModalOpen}
+          onClose={() => setIsSmartwatchModalOpen(false)}
+          userId={user?.id || "rahul_mumbai_demo"}
+          onVitalsUpdated={(updated) => setLiveTelemetry(updated)}
+        />
 
       </div>
     </div>

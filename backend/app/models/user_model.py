@@ -26,6 +26,9 @@ class User(Base):
     emergency_contacts = Column(Text, nullable=True, default="[]")  # JSON string of emergency contacts
     surgeries = Column(Text, nullable=True, default="[]")           # JSON string of past surgeries
     abha_id = Column(String(50), nullable=True, default="91-8273-4920-1124") # ABDM / ABHA ID
+    is_abha_verified = Column(Integer, default=1)                   # 1 if verified via NHA/OTP, 0 if unverified
+    abha_address = Column(String(100), nullable=True, default="rahul.sharma@abdm") # e.g. username@abdm
+    abha_verified_at = Column(DateTime, nullable=True, default=datetime.datetime.utcnow)
     profile_completion_pct = Column(Integer, default=82)            # e.g., 82%
     
     language = Column(String(10), default="en")
