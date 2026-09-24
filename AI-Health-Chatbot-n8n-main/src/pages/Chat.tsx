@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import { toast } from "sonner";
 import { chatService, translationService, profileService } from "../services/api";
 import { 
